@@ -2,8 +2,20 @@ version: "3.8"
 services:
   app:
     build: .
+    command: npm run dev
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
     ports:
       - "3000:3000"
     volumes:
       - .:/app
-    command: npm run dev
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres:/var/lib/postgresql/data/pgdata
+volumes:
+  postgres:

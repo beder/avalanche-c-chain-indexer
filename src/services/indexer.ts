@@ -1,10 +1,12 @@
 import { Avalanche } from "./avalanche";
 import { toHex } from "web3-utils";
+import { PrismaClient } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
+import chunk from "lodash.chunk";
 
 export class Indexer {
   avalanche = new Avalanche();
-
-  database = new Map();
+  prisma = new PrismaClient();
 
   async startIndexing() {
     try {
@@ -21,63 +23,59 @@ export class Indexer {
     try {
       const latestBlockNumber = await this.avalanche.getLatestBlockNumber();
 
-      console.log("Latest block number:", latestBlockNumber);
+      console.log("Latest block number:", BigInt(latestBlockNumber));
 
       console.log("Indexing blocks...");
 
-      await this.indexBlocks(latestBlockNumber);
+      await this.indexBlocks(BigInt(latestBlockNumber));
 
-      console.log("Block count:", this.database.get("blocks").size);
-      console.log("Transaction count:", this.database.get("transactions").size);
-      console.log("Account count:", this.database.get("accounts").size);
+      console.log("Transaction count:", await this.prisma.transaction.count());
+      console.log("Account count:", await this.prisma.account.count());
     } catch (err) {
       console.error("Error indexing transaction", err);
     }
   }
 
-  async indexBlocks(blockNumber: string) {
-    //
-    // Check if block is already indexed. If so, return.
-    // If not, index the block and add it and any blocks with a lower number to the database.
-    // blockNumber is in hex format, so convert it to a number.
-    //
-    const blocks = this.database.get("blocks") || new Map();
+  async indexBlocks(blockNumber: bigint) {
+    const blockExists = await this.prisma.transaction.findFirst({
+      where: {
+        blockNumber,
+      },
+    });
 
-    if (blocks.has(blockNumber)) {
+    if (blockExists) {
       console.log(`Block ${blockNumber} already indexed.`);
 
       return;
     }
 
-    if (blocks.size === 0) {
-      await this.indexBlock(blockNumber);
+    const maxIndexedBlockNumber =
+      (
+        await this.prisma.transaction.findFirst({
+          orderBy: {
+            blockNumber: "desc",
+          },
+        })
+      )?.blockNumber || blockNumber - BigInt(1);
 
-      return;
-    }
+    const blockNumbers = Array.from(
+      { length: Number(blockNumber - maxIndexedBlockNumber) },
+      (_, i) => maxIndexedBlockNumber + BigInt(i + 1)
+    );
 
-    let key = parseInt(blockNumber, 16);
+    const blockNumbersSets = chunk(blockNumbers, 5);
 
-    while (!blocks.has(toHex(key - 1))) {
-      console.log(`Block ${toHex(key - 1)} not indexed yet.`);
-
-      key--;
-    }
-
-    for (let i = key; i <= parseInt(blockNumber, 16); i++) {
-      const indexedBlockNumber = toHex(i);
-
-      await this.indexBlock(indexedBlockNumber);
+    for (const blockNumbersSet of blockNumbersSets) {
+      await Promise.all(
+        blockNumbersSet.map(async (blockNumber) => {
+          await this.indexBlock(Number(blockNumber));
+        })
+      );
     }
   }
 
-  async indexBlock(blockNumber: string) {
-    const blocks = this.database.get("blocks") || new Map();
-
-    const block = await this.avalanche.getBlockByNumber(blockNumber);
-
-    console.log("Indexed block:", blockNumber);
-
-    blocks.set(blockNumber, blockNumber);
+  async indexBlock(blockNumber: number) {
+    const block = await this.avalanche.getBlockByNumber(toHex(blockNumber));
 
     await this.indexTransactions(block.transactions);
 
@@ -88,34 +86,62 @@ export class Indexer {
       addresses.add(tx.to);
     });
 
-    await this.indexAccounts(Array.from(addresses));
+    await this.indexAccounts(Array.from(addresses).filter(Boolean));
 
-    this.database.set("blocks", blocks);
+    console.log("Indexed block:", blockNumber);
   }
 
   async indexTransactions(transactions: any[]) {
-    const txs = this.database.get("transactions") || new Map();
+    await Promise.all(
+      transactions.map(async (tx) => {
+        try {
+          await this.prisma.transaction.upsert({
+            where: {
+              hash: tx.hash,
+            },
+            create: {
+              blockNumber: BigInt(tx.blockNumber),
+              hash: tx.hash,
+              from: tx.from,
+              to: tx.to,
+              transactionIndex: Number(tx.transactionIndex),
+              value: new Decimal(tx.value),
+            },
+            update: {},
+          });
 
-    transactions.forEach((tx) => {
-      console.log("Indexed transaction:", tx.hash);
+          console.log("Indexed transaction:", tx.hash);
+        } catch (err) {
+          console.error("Error indexing transaction", err);
 
-      txs.set(tx.hash, tx);
-    });
+          console.dir({ tx }, { depth: null, colors: true });
 
-    this.database.set("transactions", txs);
+          throw err;
+        }
+      })
+    );
   }
 
   async indexAccounts(addresses: string[]) {
-    const accounts = this.database.get("accounts") || new Map();
+    await Promise.all(
+      addresses.map(async (address) => {
+        const balance = await this.avalanche.getBalance(address);
 
-    addresses.forEach(async (address) => {
-      const balance = await this.avalanche.getBalance(address);
+        await this.prisma.account.upsert({
+          where: {
+            address,
+          },
+          create: {
+            address,
+            balance: new Decimal(balance),
+          },
+          update: {
+            balance: new Decimal(balance),
+          },
+        });
 
-      console.log(`Balance of ${address}:`, balance);
-
-      accounts.set(address, balance);
-    });
-
-    this.database.set("accounts", accounts);
+        console.log("Indexed account:", address);
+      })
+    );
   }
 }

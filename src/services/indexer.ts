@@ -1,18 +1,23 @@
 import { Avalanche } from "./avalanche";
-import { toHex } from "web3-utils";
+import { numberToHex } from "web3-utils";
 import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import chunk from "lodash.chunk";
+import { AvalancheTypes } from "../types/avalanche";
 
 export class Indexer {
-  avalanche = new Avalanche();
-  prisma = new PrismaClient();
+  private avalanche: Avalanche;
+  private prisma: PrismaClient;
+
+  constructor(avalanche: Avalanche, prisma: PrismaClient) {
+    this.avalanche = avalanche;
+    this.prisma = prisma;
+  }
 
   async startIndexing() {
     try {
       setInterval(async () => {
         await this.indexAvalanche();
-        console.log("Indexing Avalanche...");
       }, 10000); // Index transactions every 1 minute
     } catch (err) {
       console.error("Error indexing Avalanche", err);
@@ -23,14 +28,10 @@ export class Indexer {
     try {
       const latestBlockNumber = await this.avalanche.getLatestBlockNumber();
 
-      console.log("Latest block number:", BigInt(latestBlockNumber));
-
-      console.log("Indexing blocks...");
-
       await this.indexBlocks(BigInt(latestBlockNumber));
 
-      console.log("Transaction count:", await this.prisma.transaction.count());
-      console.log("Account count:", await this.prisma.account.count());
+      console.log("Transactions:", await this.prisma.transaction.count());
+      console.log("Accounts:", await this.prisma.account.count());
     } catch (err) {
       console.error("Error indexing transaction", err);
     }
@@ -44,8 +45,6 @@ export class Indexer {
     });
 
     if (blockExists) {
-      console.log(`Block ${blockNumber} already indexed.`);
-
       return;
     }
 
@@ -75,23 +74,21 @@ export class Indexer {
   }
 
   async indexBlock(blockNumber: number) {
-    const block = await this.avalanche.getBlockByNumber(toHex(blockNumber));
+    const block = await this.avalanche.getBlockByNumber(numberToHex(blockNumber));
 
     await this.indexTransactions(block.transactions);
 
     const addresses = new Set<string>();
 
-    block.transactions.forEach((tx: any) => {
+    block.transactions.forEach((tx) => {
       addresses.add(tx.from);
       addresses.add(tx.to);
     });
 
     await this.indexAccounts(Array.from(addresses).filter(Boolean));
-
-    console.log("Indexed block:", blockNumber);
   }
 
-  async indexTransactions(transactions: any[]) {
+  async indexTransactions(transactions: AvalancheTypes.Transaction[]) {
     await Promise.all(
       transactions.map(async (tx) => {
         try {
@@ -109,8 +106,6 @@ export class Indexer {
             },
             update: {},
           });
-
-          console.log("Indexed transaction:", tx.hash);
         } catch (err) {
           console.error("Error indexing transaction", err);
 
@@ -139,8 +134,6 @@ export class Indexer {
             balance: new Decimal(balance),
           },
         });
-
-        console.log("Indexed account:", address);
       })
     );
   }

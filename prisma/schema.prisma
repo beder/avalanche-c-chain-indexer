@@ -17,11 +17,17 @@ model Transaction {
   from             String?
   blockNumber      BigInt
   transactionIndex Int
-  value            Decimal @db.Decimal(65, 0)
+  value            Decimal @db.Decimal(30, 0)
+
+  @@index([from, to], name: "index_transactions_on_address")
+  @@index([from, to, blockNumber, transactionIndex], name: "index_transactions_on_address_and_block")
+  @@index([value], name: "index_transactions_on_value")
 }
 
 model Account {
   id      String  @id @default(cuid())
   address String  @unique
-  balance Decimal @db.Decimal(65, 0)
+  balance Decimal @db.Decimal(30, 0)
+
+  @@index([balance], name: "index_accounts_on_balance")
 }

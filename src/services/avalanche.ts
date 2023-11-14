@@ -1,7 +1,8 @@
 import { cchain } from "../lib/avalanche";
+import { AvalancheTypes } from "../types/avalanche";
 
 export class Avalanche {
-  async getBalance(address: string) {
+  async getBalance(address: string): Promise<string> {
     const response = await cchain.callMethod("eth_getBalance", [
       address,
       "latest",
@@ -10,7 +11,7 @@ export class Avalanche {
     return response.data.result;
   }
 
-  async getBlockByNumber(blockNumber: string) {
+  async getBlockByNumber(blockNumber: string): Promise<AvalancheTypes.Block> {
     const response = await cchain.callMethod("eth_getBlockByNumber", [
       blockNumber,
       true,

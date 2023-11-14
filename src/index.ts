@@ -15,21 +15,24 @@ const transactions = new Transactions(prisma);
 const indexer = new Indexer(avalanche, prisma);
 
 app.get(
-  "/transactions/:address",
+  "/addresses/top-by-balance",
+  transactions.getTopAddresses.bind(transactions)
+);
+app.get(
+  "/addresses/:address/transactions",
   transactions.listTransactions.bind(transactions)
 );
 app.get(
-  "/transaction-count/:address",
+  "/addresses/:address/transaction-count",
   transactions.getTransactionCount.bind(transactions)
 );
 app.get(
-  "/transactions-by-value",
+  "/transactions",
   transactions.listTransactionsByValue.bind(transactions)
 );
-app.get("/top-addresses", transactions.getTopAddresses.bind(transactions));
 
 indexer.startIndexing();
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`API server is running on port ${port}`);
 });

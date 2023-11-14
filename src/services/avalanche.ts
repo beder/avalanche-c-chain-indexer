@@ -3,25 +3,19 @@ import { AvalancheTypes } from "../types/avalanche";
 
 export class Avalanche {
   async getBalance(address: string): Promise<string> {
-    const response = await cchain.callMethod("eth_getBalance", [
-      address,
-      "latest",
-    ]);
-
-    return response.data.result;
+    return this.callMethod("eth_getBalance", [address, "latest"]);
   }
 
   async getBlockByNumber(blockNumber: string): Promise<AvalancheTypes.Block> {
-    const response = await cchain.callMethod("eth_getBlockByNumber", [
-      blockNumber,
-      true,
-    ]);
-
-    return response.data.result;
+    return this.callMethod("eth_getBlockByNumber", [blockNumber, true]);
   }
 
   async getLatestBlockNumber(): Promise<string> {
-    const response = await cchain.callMethod("eth_blockNumber", []);
+    return this.callMethod("eth_blockNumber", []);
+  }
+
+  private async callMethod(method: string, params: any[]): Promise<any> {
+    const response = await cchain.callMethod(method, params);
 
     return response.data.result;
   }

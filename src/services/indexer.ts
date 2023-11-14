@@ -18,7 +18,7 @@ export class Indexer {
     try {
       setInterval(async () => {
         await this.indexAvalanche();
-      }, 10000); // Index transactions every 1 minute
+      }, 60000); // Index transactions every 1 minute
     } catch (err) {
       console.error("Error indexing Avalanche", err);
     }

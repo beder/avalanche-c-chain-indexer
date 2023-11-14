@@ -1,3 +1,4 @@
+// src/services/transactions.ts
 import { Request, Response } from "express";
 import { Account, PrismaClient, Transaction } from "@prisma/client";
 import { numberToHex } from "web3-utils";
@@ -39,7 +40,7 @@ export class Transactions {
   async getTransactionCount(req: Request, res: Response) {
     const { address } = req.params;
 
-    const transactionCount = await this.prisma.transaction.count({
+    const count = await this.prisma.transaction.count({
       where: {
         OR: [
           {
@@ -52,7 +53,7 @@ export class Transactions {
       },
     });
 
-    res.json(transactionCount);
+    res.json({ count });
   }
 
   async listTransactionsByValue(req: Request, res: Response) {
@@ -82,7 +83,7 @@ export class Transactions {
     return {
       ...rest,
       balance: numberToHex(address.balance.toFixed(0)),
-    }
+    };
   }
 
   private formatTransaction(tx: Transaction) {

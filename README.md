@@ -1,13 +1,151 @@
 # Avalanche C-Chain Indexer
 
-## Running the application the first time
+This project indexes the C-Chain of Avalanche and provides endpoints for accessing information related to blockchain transactions and addresses.
 
-- docker compose run --rm app npm install
-- docker compose run -e POSTGRES_HOST_AUTH_METHOD=trust --rm postgres
-  - Please note that this command will not exit automatically. You will need to end it manually. Use Ctrl+C in MacOS.
-- docker compose run --rm app npx prisma db push
-- docker compose up
+## How to setup
+
+1. Install dependencies
+
+```bash
+docker compose run --rm app npm install
+```
+
+2. Initialize the database
+
+💡 Please note that this command will not exit automatically. You will need to end it manually. Use Ctrl+C in MacOS.
+
+```bash
+docker compose run -e POSTGRES_HOST_AUTH_METHOD=trust --rm postgres
+```
+
+3. Setup the database
+
+```bash
+docker compose run --rm app npx prisma db push
+```
+
+## How to run
+
+```bash
+docker compose up
+```
 
 ## Resetting the database
 
-- docker compose run --rm app npx prisma db push --force-reset
+If you need to start fresh by erasing all indexed data, execute the following command.
+
+```bash
+docker compose run --rm app npx prisma db push --force-reset
+```
+
+## Endpoints
+
+Below are instructions on how to call the endpoints of the API along with examples of requests and responses.
+
+### List Transactions for a Specific Address
+
+#### Endpoint:
+
+```http
+GET /addresses/:address/transactions
+```
+
+#### Example Request:
+
+```http
+GET http://localhost:3000/addresses/0x123abc/transactions
+```
+
+#### Example Response:
+
+```json
+[
+    {
+        "hash": "0x5aea6d0e7f8d910260ec0bddeeb75504aacf274a00322b01d15828b60df16839",
+        "to": "0x123abc",
+        "from": "0x9f8c163cba728e99993abe7495f06c0a3c8ac8b9",
+        "blockNumber": "0x2400f8d",
+        "transactionIndex": "0x2",
+        "value": "0x1b1ac86aedc91c0000"
+    },
+    // ... additional transactions for the address
+]
+```
+
+### Get Transaction Count for a Specific Address
+
+#### Endpoint:
+
+```http
+GET /addresses/:address/transaction-count
+```
+
+#### Example Request:
+
+```http
+GET http://localhost:3000/addresses/0x123abc/transaction-count
+```
+
+#### Example Response:
+
+```json
+{
+  "count": 42
+}
+```
+
+### List Transactions Sorted by Value
+
+#### Endpoint:
+
+```http
+GET /transactions
+```
+
+#### Example Request:
+
+```http
+GET http://localhost:3000/transactions
+```
+
+#### Example Response:
+
+```json
+[
+    {
+        "hash": "0x5aea6d0e7f8d910260ec0bddeeb75504aacf274a00322b01d15828b60df16839",
+        "to": "0xffb02c56bb2843b794016ddc08ab11a8be7d73ca",
+        "from": "0x9f8c163cba728e99993abe7495f06c0a3c8ac8b9",
+        "blockNumber": "0x2400f8d",
+        "transactionIndex": "0x2",
+        "value": "0x1b1ac86aedc91c0000"
+    },
+    // ... additional transactions sorted by value
+]
+```
+
+### Get Top Addresses by Balance
+
+#### Endpoint:
+
+```http
+GET /addresses/top-by-balance
+```
+
+#### Example Request:
+
+```http
+GET http://localhost:3000/addresses/top-by-balance
+```
+
+#### Example Response:
+
+```json
+[
+    {
+        "address": "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
+        "balance": "0x50d2701ab4082e190466f"
+    },
+    // ... additional top addresses
+]
+```

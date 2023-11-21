@@ -7,7 +7,7 @@ This project indexes the C-Chain of Avalanche and provides endpoints for accessi
 1. Install dependencies
 
 ```bash
-docker compose run --rm app npm install
+docker compose run --rm api npm install
 ```
 
 2. Initialize the database
@@ -21,7 +21,7 @@ docker compose run -e POSTGRES_HOST_AUTH_METHOD=trust --rm postgres
 3. Setup the database
 
 ```bash
-docker compose run --rm app npx prisma db push
+docker compose run --rm indexer npx prisma db push
 ```
 
 ## How to run
@@ -35,7 +35,7 @@ docker compose up
 If you need to start fresh by erasing all indexed data, execute the following command.
 
 ```bash
-docker compose run --rm app npx prisma db push --force-reset
+docker compose run --rm indexer npx prisma db push --force-reset
 ```
 
 ## Endpoints

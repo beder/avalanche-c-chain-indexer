@@ -1,4 +1,9 @@
 export declare namespace AvalancheTypes {
+  interface Account {
+    address: string;
+    balance: string;
+  }
+
   interface Block {
     transactions: Transaction[];
   }

@@ -1,38 +1,28 @@
 // src/services/transactions.ts
 import { Request, Response } from "express";
-import { Account, PrismaClient, Transaction } from "@prisma/client";
+import { Account, Transaction } from "@prisma/client";
 import { numberToHex } from "web3-utils";
+import { AccountRepository } from "../repositories/account";
+import { TransactionRepository } from "../repositories/transaction";
 
 export class ApiService {
-  private prisma: PrismaClient = new PrismaClient();
+  private accountRepository: AccountRepository;
+  private transactionRepository: TransactionRepository;
 
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+  constructor(
+    accountRepository: AccountRepository,
+    transactionRepository: TransactionRepository
+  ) {
+    this.accountRepository = accountRepository;
+    this.transactionRepository = transactionRepository;
   }
 
   async listTransactions(req: Request, res: Response) {
     const { address } = req.params;
 
-    const transactions = await this.prisma.transaction.findMany({
-      where: {
-        OR: [
-          {
-            from: address,
-          },
-          {
-            to: address,
-          },
-        ],
-      },
-      orderBy: [
-        {
-          blockNumber: "asc",
-        },
-        {
-          transactionIndex: "asc",
-        },
-      ],
-    });
+    const transactions = await this.transactionRepository.listByAddress(
+      address
+    );
 
     res.json(transactions.map(this.formatTransaction));
   }
@@ -40,39 +30,19 @@ export class ApiService {
   async getTransactionCount(req: Request, res: Response) {
     const { address } = req.params;
 
-    const count = await this.prisma.transaction.count({
-      where: {
-        OR: [
-          {
-            from: address,
-          },
-          {
-            to: address,
-          },
-        ],
-      },
-    });
+    const count = await this.transactionRepository.getCountByAddress(address);
 
     res.json({ count });
   }
 
   async listTransactionsByValue(req: Request, res: Response) {
-    const transactions = await this.prisma.transaction.findMany({
-      orderBy: {
-        value: "desc",
-      },
-    });
+    const transactions = await this.transactionRepository.listByValue();
 
     res.json(transactions.map(this.formatTransaction));
   }
 
   async getTopAddresses(req: Request, res: Response) {
-    const addresses = await this.prisma.account.findMany({
-      take: 100,
-      orderBy: {
-        balance: "desc",
-      },
-    });
+    const addresses = await this.accountRepository.listTop();
 
     res.json(addresses.map(this.formatAddress));
   }

@@ -1,24 +1,27 @@
 import { AvalancheService } from "./avalanche";
 import { numberToHex } from "web3-utils";
-import { PrismaClient } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 import { AvalancheTypes } from "../types/avalanche";
 import { Job } from "bull";
 import { QueueService } from "./queue";
 import { QueueTypes } from "../types/queue";
+import { AccountRepository } from "../repositories/account";
+import { TransactionRepository } from "../repositories/transaction";
 
 export class IndexerService {
   private avalanche: AvalancheService;
-  private prisma: PrismaClient;
+  private accountRepository: AccountRepository;
+  private transactionRepository: TransactionRepository;
   private queue: QueueService;
 
   constructor(
     avalanche: AvalancheService,
-    prisma: PrismaClient,
+    accountRepository: AccountRepository,
+    transactionRepository: TransactionRepository,
     queue: QueueService
   ) {
     this.avalanche = avalanche;
-    this.prisma = prisma;
+    this.accountRepository = accountRepository;
+    this.transactionRepository = transactionRepository;
     this.queue = queue;
   }
 
@@ -26,7 +29,7 @@ export class IndexerService {
     try {
       setInterval(async () => {
         await this.indexAvalanche();
-      }, 10000); // Index transactions every 1 minute
+      }, Number(process.env.INDEXER_INTERVAL || 60000));
     } catch (err) {
       console.error("Error indexing Avalanche", err);
     }
@@ -38,32 +41,25 @@ export class IndexerService {
 
       await this.indexBlocks(BigInt(latestBlockNumber));
 
-      console.log("Transactions:", await this.prisma.transaction.count());
-      console.log("Accounts:", await this.prisma.account.count());
+      console.log("Transactions:", await this.transactionRepository.getCount());
+      console.log("Accounts:", await this.accountRepository.getCount());
     } catch (err) {
       console.error("Error indexing transaction", err);
     }
   }
 
   async indexBlocks(blockNumber: bigint) {
-    const blockExists = await this.prisma.transaction.findFirst({
-      where: {
-        blockNumber,
-      },
-    });
+    const blockCount = await this.transactionRepository.getCountByBlockNumber(
+      blockNumber
+    );
 
-    if (blockExists) {
+    if (blockCount) {
       return;
     }
 
     const maxIndexedBlockNumber =
-      (
-        await this.prisma.transaction.findFirst({
-          orderBy: {
-            blockNumber: "desc",
-          },
-        })
-      )?.blockNumber || blockNumber - BigInt(1);
+      (await this.transactionRepository.getHighestBlockNumber()) ||
+      blockNumber - BigInt(1);
 
     const blockNumbers = Array.from(
       { length: Number(blockNumber - maxIndexedBlockNumber) },
@@ -122,20 +118,7 @@ export class IndexerService {
     await Promise.all(
       transactions.map(async (tx) => {
         try {
-          await this.prisma.transaction.upsert({
-            where: {
-              hash: tx.hash,
-            },
-            create: {
-              blockNumber: BigInt(tx.blockNumber),
-              hash: tx.hash,
-              from: tx.from,
-              to: tx.to,
-              transactionIndex: Number(tx.transactionIndex),
-              value: new Decimal(tx.value),
-            },
-            update: {},
-          });
+          await this.transactionRepository.createOrUpdate(tx);
         } catch (err) {
           console.error("Error indexing transaction", err);
 
@@ -150,17 +133,6 @@ export class IndexerService {
   async indexAccount(address: string) {
     const balance = await this.avalanche.getBalance(address);
 
-    await this.prisma.account.upsert({
-      where: {
-        address,
-      },
-      create: {
-        address,
-        balance: new Decimal(balance),
-      },
-      update: {
-        balance: new Decimal(balance),
-      },
-    });
+    await this.accountRepository.createOrUpdate({ address, balance });
   }
 }

@@ -1,7 +1,7 @@
 import { cchain } from "../lib/avalanche";
 import { AvalancheTypes } from "../types/avalanche";
 
-export class Avalanche {
+export class AvalancheService {
   async getBalance(address: string): Promise<string> {
     return this.callMethod("eth_getBalance", [address, "latest"]);
   }

@@ -1,18 +1,13 @@
-// src/index.ts
 import express from "express";
-import { Avalanche } from "./services/avalanche";
-import { Transactions } from "./services/transactions";
-import { Indexer } from "./services/indexer";
+import { ApiService } from "./services/api";
 import { PrismaClient } from "@prisma/client";
 
 const app = express();
 const port = 3000;
 
-const avalanche = new Avalanche();
 const prisma = new PrismaClient();
 
-const transactions = new Transactions(prisma);
-const indexer = new Indexer(avalanche, prisma);
+const transactions = new ApiService(prisma);
 
 app.get(
   "/addresses/top-by-balance",
@@ -30,8 +25,6 @@ app.get(
   "/transactions",
   transactions.listTransactionsByValue.bind(transactions)
 );
-
-indexer.startIndexing();
 
 app.listen(port, () => {
   console.log(`API server is running on port ${port}`);

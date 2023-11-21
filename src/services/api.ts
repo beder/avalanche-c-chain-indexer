@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import { Account, PrismaClient, Transaction } from "@prisma/client";
 import { numberToHex } from "web3-utils";
 
-export class Transactions {
+export class ApiService {
   private prisma: PrismaClient = new PrismaClient();
 
   constructor(prisma: PrismaClient) {

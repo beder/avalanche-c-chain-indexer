@@ -1,24 +1,32 @@
-import { Avalanche } from "./avalanche";
+import { AvalancheService } from "./avalanche";
 import { numberToHex } from "web3-utils";
 import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
-import chunk from "lodash.chunk";
 import { AvalancheTypes } from "../types/avalanche";
+import { Job } from "bull";
+import { QueueService } from "./queue";
+import { QueueTypes } from "../types/queue";
 
-export class Indexer {
-  private avalanche: Avalanche;
+export class IndexerService {
+  private avalanche: AvalancheService;
   private prisma: PrismaClient;
+  private queue: QueueService;
 
-  constructor(avalanche: Avalanche, prisma: PrismaClient) {
+  constructor(
+    avalanche: AvalancheService,
+    prisma: PrismaClient,
+    queue: QueueService
+  ) {
     this.avalanche = avalanche;
     this.prisma = prisma;
+    this.queue = queue;
   }
 
   async startIndexing() {
     try {
       setInterval(async () => {
         await this.indexAvalanche();
-      }, 60000); // Index transactions every 1 minute
+      }, 10000); // Index transactions every 1 minute
     } catch (err) {
       console.error("Error indexing Avalanche", err);
     }
@@ -62,19 +70,37 @@ export class Indexer {
       (_, i) => maxIndexedBlockNumber + BigInt(i + 1)
     );
 
-    const blockNumbersSets = chunk(blockNumbers, 5);
+    await Promise.all(
+      blockNumbers.map(async (blockNumber) => {
+        await this.queue.indexBlock({ blockNumber: Number(blockNumber) });
+      })
+    );
+  }
 
-    for (const blockNumbersSet of blockNumbersSets) {
-      await Promise.all(
-        blockNumbersSet.map(async (blockNumber) => {
-          await this.indexBlock(Number(blockNumber));
-        })
-      );
+  async processAccount(job: Job<QueueTypes.Account>) {
+    const { address } = job.data;
+
+    try {
+      await this.indexAccount(address);
+    } catch (err) {
+      console.error("Error indexing account", err);
+    }
+  }
+
+  async processBlock(job: Job<QueueTypes.Block>) {
+    const { blockNumber } = job.data;
+
+    try {
+      await this.indexBlock(blockNumber);
+    } catch (err) {
+      console.error("Error indexing block", err);
     }
   }
 
   async indexBlock(blockNumber: number) {
-    const block = await this.avalanche.getBlockByNumber(numberToHex(blockNumber));
+    const block = await this.avalanche.getBlockByNumber(
+      numberToHex(blockNumber)
+    );
 
     await this.indexTransactions(block.transactions);
 
@@ -85,7 +111,11 @@ export class Indexer {
       addresses.add(tx.to);
     });
 
-    await this.indexAccounts(Array.from(addresses).filter(Boolean));
+    await Promise.all(
+      Array.from(addresses)
+        .filter(Boolean)
+        .map(async (address) => this.queue.indexAccount({ address }))
+    );
   }
 
   async indexTransactions(transactions: AvalancheTypes.Transaction[]) {
@@ -117,24 +147,20 @@ export class Indexer {
     );
   }
 
-  async indexAccounts(addresses: string[]) {
-    await Promise.all(
-      addresses.map(async (address) => {
-        const balance = await this.avalanche.getBalance(address);
+  async indexAccount(address: string) {
+    const balance = await this.avalanche.getBalance(address);
 
-        await this.prisma.account.upsert({
-          where: {
-            address,
-          },
-          create: {
-            address,
-            balance: new Decimal(balance),
-          },
-          update: {
-            balance: new Decimal(balance),
-          },
-        });
-      })
-    );
+    await this.prisma.account.upsert({
+      where: {
+        address,
+      },
+      create: {
+        address,
+        balance: new Decimal(balance),
+      },
+      update: {
+        balance: new Decimal(balance),
+      },
+    });
   }
 }

@@ -19,8 +19,12 @@ model Transaction {
   transactionIndex Int
   value            Decimal @db.Decimal(30, 0)
 
-  @@index([from, to], name: "index_transactions_on_address")
-  @@index([from, to, blockNumber, transactionIndex], name: "index_transactions_on_address_and_block")
+  @@index([blockNumber], name: "index_transactions_on_block_number")
+  @@index([from], name: "index_transactions_on_sender")
+  @@index([from, blockNumber, transactionIndex], name: "index_transactions_on_sender_and_block")
+  @@index([to, blockNumber, transactionIndex], name: "index_transactions_on_receiver_and_block")
+  @@index([hash], name: "index_transactions_on_hash")
+  @@index([to], name: "index_transactions_on_receiver")
   @@index([value], name: "index_transactions_on_value")
 }
 
@@ -29,5 +33,6 @@ model Account {
   address String  @unique
   balance Decimal @db.Decimal(30, 0)
 
+  @@index([address], name: "index_accounts_on_address")
   @@index([balance], name: "index_accounts_on_balance")
 }

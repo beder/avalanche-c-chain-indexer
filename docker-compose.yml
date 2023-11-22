@@ -31,6 +31,7 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data/pgdata
   redis:
+    command: ["redis-server", "--appendonly", "yes"]
     image: redis:7-alpine
     volumes:
       - redis:/data

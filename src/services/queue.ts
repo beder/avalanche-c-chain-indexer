@@ -25,15 +25,11 @@ export class QueueService {
     this.blocksQueue.add(block);
   }
 
-  async processAccounts(
-    callback: (job: Bull.Job<QueueTypes.Account>) => Promise<void>
-  ) {
+  async processAccounts(callback: QueueTypes.AccountCallback) {
     this.accountsQueue.process(callback);
   }
 
-  async processBlocks(
-    callback: (job: Bull.Job<QueueTypes.Block>) => Promise<void>
-  ) {
+  async processBlocks(callback: QueueTypes.BlockCallback) {
     this.blocksQueue.process(callback);
   }
 }

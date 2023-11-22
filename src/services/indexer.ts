@@ -73,7 +73,7 @@ export class IndexerService {
     );
   }
 
-  async processAccount(job: Job<QueueTypes.Account>) {
+  async processAccount(job: QueueTypes.AccountJob) {
     const { address } = job.data;
 
     try {
@@ -83,7 +83,7 @@ export class IndexerService {
     }
   }
 
-  async processBlock(job: Job<QueueTypes.Block>) {
+  async processBlock(job: QueueTypes.BlockJob) {
     const { blockNumber } = job.data;
 
     try {

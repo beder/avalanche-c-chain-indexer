@@ -20,12 +20,15 @@ model Transaction {
   value            Decimal @db.Decimal(30, 0)
 
   @@index([blockNumber], name: "index_transactions_on_block_number")
+  @@index([blockNumber, transactionIndex], name: "index_transactions_on_block")
   @@index([from], name: "index_transactions_on_sender")
   @@index([from, blockNumber, transactionIndex], name: "index_transactions_on_sender_and_block")
   @@index([to, blockNumber, transactionIndex], name: "index_transactions_on_receiver_and_block")
   @@index([hash], name: "index_transactions_on_hash")
   @@index([to], name: "index_transactions_on_receiver")
   @@index([value], name: "index_transactions_on_value")
+  @@index([value, blockNumber], name: "index_transactions_on_value_and_block")
+  @@index([value, blockNumber, transactionIndex], name: "index_transactions_on_value_and_block_and_index")
 }
 
 model Account {

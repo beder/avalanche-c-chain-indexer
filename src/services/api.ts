@@ -20,8 +20,11 @@ export class ApiService {
   async listTransactions(req: Request, res: Response) {
     const { address } = req.params;
 
+    const pagination = this.getPaginationParams(req);
+
     const transactions = await this.transactionRepository.listByAddress(
-      address
+      address,
+      pagination
     );
 
     res.json(transactions.map(this.formatTransaction));
@@ -36,7 +39,11 @@ export class ApiService {
   }
 
   async listTransactionsByValue(req: Request, res: Response) {
-    const transactions = await this.transactionRepository.listByValue();
+    const pagination = this.getPaginationParams(req);
+
+    const transactions = await this.transactionRepository.listByValue(
+      pagination
+    );
 
     res.json(transactions.map(this.formatTransaction));
   }
@@ -64,6 +71,24 @@ export class ApiService {
       blockNumber: numberToHex(tx.blockNumber),
       transactionIndex: numberToHex(tx.transactionIndex),
       value: numberToHex(tx.value.toFixed(0)),
+    };
+  }
+
+  private getPaginationParams(req: Request) {
+    const { cursor, pageSize, direction } = req.query;
+
+    const take = pageSize ? Number(pageSize) : 1000;
+
+    const validatedDirection = ["forward", "backward"].includes(
+      direction as string
+    )
+      ? (direction as "backward" | "forward")
+      : "forward";
+
+    return {
+      cursor: cursor as string,
+      pageSize: take,
+      direction: validatedDirection,
     };
   }
 }

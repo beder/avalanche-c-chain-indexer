@@ -35,18 +35,9 @@ export class TransactionRepository {
   }
 
   async getCountByAddress(address: string) {
-    return this.prisma.transaction.count({
-      where: {
-        OR: [
-          {
-            from: address,
-          },
-          {
-            to: address,
-          },
-        ],
-      },
-    });
+    const where = this.getAddressFilter(address);
+
+    return this.prisma.transaction.count({ where });
   }
 
   async getCountByBlockNumber(blockNumber: bigint) {
@@ -71,124 +62,102 @@ export class TransactionRepository {
     address: string,
     pagination: RepositoryTypes.Pagination = {}
   ) {
-    const { pageSize, direction } = pagination;
+    const where = await this.getListByAddressFilter(address, pagination);
+    const orderBy = this.getListByAddressSort(pagination.direction);
 
-    const cursorConditions = await this.getListByAddressCursorConditions(
-      pagination
-    );
-
-    const orderBy = direction === "backward" ? "desc" : "asc";
-
-    const where = {
-      AND: [
-        cursorConditions,
-        {
-          OR: [
-            {
-              from: address,
-            },
-            {
-              to: address,
-            },
-          ],
-        },
-      ],
-    };
-
-    const transactions = await this.prisma.transaction.findMany({
-      where,
-      orderBy: [
-        {
-          blockNumber: orderBy,
-        },
-        {
-          transactionIndex: orderBy,
-        },
-      ],
-      take: pageSize || 1000,
-    });
-
-    return direction === "backward" ? transactions.reverse() : transactions;
+    return this.getTransactions(where, orderBy, pagination);
   }
 
   async listByValue(pagination: RepositoryTypes.Pagination = {}) {
-    const { pageSize, direction } = pagination;
+    const where = await this.getListByValueFilter(pagination);
+    const orderBy = this.getListByValueSort(pagination.direction);
 
-    const blockOrderBy = direction === "backward" ? "desc" : "asc";
-    const valueOrderBy = direction === "backward" ? "asc" : "desc";
-
-    const where = await this.getListByValueCursorConditions(pagination);
-
-    const transactions = await this.prisma.transaction.findMany({
-      where,
-      orderBy: [
-        {
-          value: valueOrderBy,
-        },
-        {
-          blockNumber: blockOrderBy,
-        },
-        {
-          transactionIndex: blockOrderBy,
-        },
-      ],
-      take: pageSize,
-    });
-
-    return direction === "backward" ? transactions.reverse() : transactions;
+    return this.getTransactions(where, orderBy, pagination);
   }
 
-  private async getListByAddressCursorConditions(
-    pagination?: RepositoryTypes.Pagination
-  ) {
-    if (!pagination?.cursor) {
-      return {};
-    }
-
-    const cursorTransaction = await this.getTransaction(pagination.cursor);
-
-    if (!cursorTransaction) {
-      return {};
-    }
-
-    const { direction } = pagination;
-
-    const cursorOperator = direction === "backward" ? "lt" : "gt";
-
+  private getAddressFilter(address: string) {
     return {
       OR: [
         {
-          blockNumber: cursorTransaction.blockNumber,
-          transactionIndex: {
-            [cursorOperator]: cursorTransaction.transactionIndex,
-          },
+          from: address,
         },
         {
-          blockNumber: {
-            [cursorOperator]: cursorTransaction.blockNumber,
-          },
+          to: address,
         },
       ],
     };
   }
 
-  private async getListByValueCursorConditions(
-    pagination?: RepositoryTypes.Pagination
-  ) {
-    if (!pagination?.cursor) {
-      return {};
+  private getTransactionByCursor(cursor?: string) {
+    if (!cursor) {
+      return null;
     }
 
-    const transaction = await this.getTransaction(pagination.cursor);
+    return this.prisma.transaction.findUnique({
+      where: {
+        hash: cursor,
+      },
+    });
+  }
+
+  private async getListByAddressFilter(
+    address: string,
+    pagination: RepositoryTypes.Pagination
+  ) {
+    const addressFilter = this.getAddressFilter(address);
+
+    const transaction = await this.getTransactionByCursor(pagination.cursor);
+
+    if (!transaction) {
+      return addressFilter;
+    }
+
+    const cursorOperator = pagination.direction === "backward" ? "lt" : "gt";
+
+    return {
+      AND: [
+        {
+          OR: [
+            {
+              blockNumber: transaction.blockNumber,
+              transactionIndex: {
+                [cursorOperator]: transaction.transactionIndex,
+              },
+            },
+            {
+              blockNumber: {
+                [cursorOperator]: transaction.blockNumber,
+              },
+            },
+          ],
+        },
+        addressFilter,
+      ],
+    };
+  }
+
+  private getListByAddressSort(direction?: "backward" | "forward") {
+    const orderBy: "desc" | "asc" = direction === "backward" ? "desc" : "asc";
+
+    return [
+      {
+        blockNumber: orderBy,
+      },
+      {
+        transactionIndex: orderBy,
+      },
+    ];
+  }
+
+  private async getListByValueFilter(pagination: RepositoryTypes.Pagination) {
+    const transaction = await this.getTransactionByCursor(pagination.cursor);
 
     if (!transaction) {
       return {};
     }
 
-    const { direction } = pagination;
-
-    const blockOperator = direction === "backward" ? "lt" : "gt";
-    const valueOperator = direction === "backward" ? "gt" : "lt";
+    const blockOperator = pagination.direction === "backward" ? "lt" : "gt";
+    const valueOperator = pagination.direction === "backward" ? "gt" : "lt";
 
     return {
       OR: [
@@ -214,11 +183,46 @@ export class TransactionRepository {
     };
   }
 
-  private async getTransaction(hash: string) {
-    return this.prisma.transaction.findUnique({
-      where: {
-        hash,
+  private getListByValueSort(direction?: "backward" | "forward") {
+    const blockOrderBy: "desc" | "asc" =
+      direction === "backward" ? "desc" : "asc";
+    const valueOrderBy: "desc" | "asc" =
+      direction === "backward" ? "asc" : "desc";
+
+    return [
+      {
+        value: valueOrderBy,
       },
+      {
+        blockNumber: blockOrderBy,
+      },
+      {
+        transactionIndex: blockOrderBy,
+      },
+    ];
+  }
+
+  private getPageSize(pagination: RepositoryTypes.Pagination) {
+    return pagination.pageSize && pagination.pageSize <= 1000
+      ? pagination.pageSize
+      : 1000;
+  }
+
+  private async getTransactions(
+    where: any,
+    orderBy: any,
+    pagination: RepositoryTypes.Pagination
+  ) {
+    const take = this.getPageSize(pagination);
+
+    const transactions = await this.prisma.transaction.findMany({
+      where,
+      orderBy,
+      take,
     });
+
+    return pagination.direction === "backward"
+      ? transactions.reverse()
+      : transactions;
   }
 }

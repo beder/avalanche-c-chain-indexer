@@ -136,7 +136,7 @@ export class TransactionRepository {
     };
   }
 
-  private getListByAddressSort(direction?: "backward" | "forward") {
+  private getListByAddressSort(direction?: RepositoryTypes.Direction) {
     const orderBy: "desc" | "asc" = direction === "backward" ? "desc" : "asc";
 
     return [
@@ -183,7 +183,7 @@ export class TransactionRepository {
     };
   }
 
-  private getListByValueSort(direction?: "backward" | "forward") {
+  private getListByValueSort(direction?: RepositoryTypes.Direction) {
     const blockOrderBy: "desc" | "asc" =
       direction === "backward" ? "desc" : "asc";
     const valueOrderBy: "desc" | "asc" =

@@ -4,6 +4,7 @@ import { Account, Transaction } from "@prisma/client";
 import { numberToHex } from "web3-utils";
 import { AccountRepository } from "../repositories/account";
 import { TransactionRepository } from "../repositories/transaction";
+import { RepositoryTypes } from "../types/repository";
 
 export class ApiService {
   private accountRepository: AccountRepository;
@@ -20,7 +21,7 @@ export class ApiService {
   async listTransactions(req: Request, res: Response) {
     const { address } = req.params;
 
-    const pagination = this.getPaginationParams(req);
+    const pagination = this.getPagination(req);
 
     const transactions = await this.transactionRepository.listByAddress(
       address,
@@ -39,7 +40,7 @@ export class ApiService {
   }
 
   async listTransactionsByValue(req: Request, res: Response) {
-    const pagination = this.getPaginationParams(req);
+    const pagination = this.getPagination(req);
 
     const transactions = await this.transactionRepository.listByValue(
       pagination
@@ -74,21 +75,16 @@ export class ApiService {
     };
   }
 
-  private getPaginationParams(req: Request) {
+  private getPagination(req: Request): RepositoryTypes.Pagination {
     const { cursor, pageSize, direction } = req.query;
 
-    const take = pageSize ? Number(pageSize) : 1000;
-
-    const validatedDirection = ["forward", "backward"].includes(
-      direction as string
-    )
-      ? (direction as "backward" | "forward")
-      : "forward";
-
     return {
-      cursor: cursor as string,
-      pageSize: take,
-      direction: validatedDirection,
+      ...(cursor && { cursor: String(cursor) }),
+      ...(pageSize && { pageSize: Number(pageSize) }),
+      ...(cursor &&
+        direction && {
+          direction: direction === "backward" ? "backward" : "forward",
+        }),
     };
   }
 }

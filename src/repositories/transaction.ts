@@ -202,10 +202,8 @@ export class TransactionRepository {
     ];
   }
 
-  private getPageSize(pagination: RepositoryTypes.Pagination) {
-    return pagination.pageSize && pagination.pageSize <= 1000
-      ? pagination.pageSize
-      : 1000;
+  private getPageSize(pageSize?: number) {
+    return pageSize && pageSize <= 1000 ? pageSize : 1000;
   }
 
   private async getTransactions(
@@ -213,7 +211,7 @@ export class TransactionRepository {
     orderBy: any,
     pagination: RepositoryTypes.Pagination
   ) {
-    const take = this.getPageSize(pagination);
+    const take = this.getPageSize(pagination.pageSize);
 
     const transactions = await this.prisma.transaction.findMany({
       where,

@@ -63,14 +63,14 @@ export class TransactionRepository {
     pagination: RepositoryTypes.Pagination = {}
   ) {
     const where = await this.getListByAddressFilter(address, pagination);
-    const orderBy = this.getListByAddressSort(pagination.direction);
+    const orderBy = this.getOrderByBlockAndTransaction(pagination.direction);
 
     return this.getTransactions(where, orderBy, pagination);
   }
 
   async listByValue(pagination: RepositoryTypes.Pagination = {}) {
     const where = await this.getListByValueFilter(pagination);
-    const orderBy = this.getListByValueSort(pagination.direction);
+    const orderBy = this.getOrderByValue(pagination.direction);
 
     return this.getTransactions(where, orderBy, pagination);
   }
@@ -136,7 +136,7 @@ export class TransactionRepository {
     };
   }
 
-  private getListByAddressSort(direction?: RepositoryTypes.Direction) {
+  private getOrderByBlockAndTransaction(direction?: RepositoryTypes.Direction) {
     const orderBy: "desc" | "asc" = direction === "backward" ? "desc" : "asc";
 
     return [
@@ -183,9 +183,7 @@ export class TransactionRepository {
     };
   }
 
-  private getListByValueSort(direction?: RepositoryTypes.Direction) {
-    const blockOrderBy: "desc" | "asc" =
-      direction === "backward" ? "desc" : "asc";
+  private getOrderByValue(direction?: RepositoryTypes.Direction) {
     const valueOrderBy: "desc" | "asc" =
       direction === "backward" ? "asc" : "desc";
 
@@ -193,12 +191,7 @@ export class TransactionRepository {
       {
         value: valueOrderBy,
       },
-      {
-        blockNumber: blockOrderBy,
-      },
-      {
-        transactionIndex: blockOrderBy,
-      },
+      ...this.getOrderByBlockAndTransaction(direction),
     ];
   }
 

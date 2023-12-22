@@ -1,7 +1,6 @@
 import { AvalancheService } from "./avalanche";
 import { numberToHex } from "web3-utils";
 import { AvalancheTypes } from "../types/avalanche";
-import { Job } from "bull";
 import { QueueService } from "./queue";
 import { QueueTypes } from "../types/queue";
 import { AccountRepository } from "../repositories/account";
@@ -12,6 +11,8 @@ export class IndexerService {
   private accountRepository: AccountRepository;
   private transactionRepository: TransactionRepository;
   private queue: QueueService;
+
+  private batchSize = 500;
 
   constructor(
     avalanche: AvalancheService,
@@ -29,7 +30,7 @@ export class IndexerService {
     try {
       setInterval(async () => {
         await this.indexAvalanche();
-      }, Number(process.env.INDEXER_INTERVAL || 60000));
+      }, Number(process.env.INDEXER_INTERVAL || 1000));
     } catch (err) {
       console.error("Error indexing Avalanche", err);
     }
@@ -37,12 +38,16 @@ export class IndexerService {
 
   async indexAvalanche() {
     try {
+      console.log("Transactions:", await this.transactionRepository.getCount());
+      console.log("Accounts:", await this.accountRepository.getCount());
+
+      if (!(await this.queue.readyForBatch(this.batchSize))) {
+        return;
+      }
+
       const latestBlockNumber = await this.avalanche.getLatestBlockNumber();
 
       await this.indexBlocks(BigInt(latestBlockNumber));
-
-      console.log("Transactions:", await this.transactionRepository.getCount());
-      console.log("Accounts:", await this.accountRepository.getCount());
     } catch (err) {
       console.error("Error indexing transaction", err);
     }
@@ -58,12 +63,16 @@ export class IndexerService {
     }
 
     const maxIndexedBlockNumber =
-      (await this.transactionRepository.getHighestBlockNumber()) ||
-      blockNumber - BigInt(1);
+      (await this.transactionRepository.getHighestBlockNumber()) || BigInt(0);
 
     const blockNumbers = Array.from(
-      { length: Number(blockNumber - maxIndexedBlockNumber) },
-      (_, i) => maxIndexedBlockNumber + BigInt(i + 1)
+      {
+        length: Math.min(
+          this.batchSize,
+          Number(blockNumber - maxIndexedBlockNumber)
+        ),
+      },
+      (_, i) => blockNumber - BigInt(i)
     );
 
     await Promise.all(

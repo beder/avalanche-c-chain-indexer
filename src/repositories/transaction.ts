@@ -55,7 +55,17 @@ export class TransactionRepository {
       },
     });
 
-    return transaction?.blockNumber || 0;
+    return transaction?.blockNumber || BigInt(0);
+  }
+
+  async getLowestBlockNumber() {
+    const transaction = await this.prisma.transaction.findFirst({
+      orderBy: {
+        blockNumber: "asc",
+      },
+    });
+
+    return transaction?.blockNumber || BigInt(0);
   }
 
   async listByAddress(
@@ -63,6 +73,13 @@ export class TransactionRepository {
     pagination: RepositoryTypes.Pagination = {}
   ) {
     const where = await this.getListByAddressFilter(address, pagination);
+    const orderBy = this.getOrderByBlockAndTransaction(pagination.direction);
+
+    return this.getTransactions(where, orderBy, pagination);
+  }
+
+  async listByBlockNumber(pagination: RepositoryTypes.Pagination = {}) {
+    const where = await this.getListByBlockNumberFilter(pagination);
     const orderBy = this.getOrderByBlockAndTransaction(pagination.direction);
 
     return this.getTransactions(where, orderBy, pagination);
@@ -106,32 +123,39 @@ export class TransactionRepository {
   ) {
     const addressFilter = this.getAddressFilter(address);
 
+    const blockNumberFilter = await this.getListByBlockNumberFilter(pagination);
+
+    return Object.keys(blockNumberFilter).length === 0
+      ? addressFilter
+      : {
+          AND: [blockNumberFilter, addressFilter],
+        };
+  }
+
+  private async getListByBlockNumberFilter(
+    pagination: RepositoryTypes.Pagination
+  ) {
     const transaction = await this.getTransactionByCursor(pagination.cursor);
 
     if (!transaction) {
-      return addressFilter;
+      return {};
     }
 
     const cursorOperator = pagination.direction === "backward" ? "lt" : "gt";
 
     return {
-      AND: [
+      OR: [
         {
-          OR: [
-            {
-              blockNumber: transaction.blockNumber,
-              transactionIndex: {
-                [cursorOperator]: transaction.transactionIndex,
-              },
-            },
-            {
-              blockNumber: {
-                [cursorOperator]: transaction.blockNumber,
-              },
-            },
-          ],
+          blockNumber: transaction.blockNumber,
+          transactionIndex: {
+            [cursorOperator]: transaction.transactionIndex,
+          },
         },
-        addressFilter,
+        {
+          blockNumber: {
+            [cursorOperator]: transaction.blockNumber,
+          },
+        },
       ],
     };
   }

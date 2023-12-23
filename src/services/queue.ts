@@ -5,7 +5,7 @@ export class QueueService {
   private accountsQueue: Bull.Queue;
   private blocksQueue: Bull.Queue;
 
-  private gracePeriod = 60000;
+  private gracePeriod = Number(process.env.QUEUE_CLEAN_GRACE_PERIOD || 3600000);
 
   private options = {
     redis: {
@@ -22,7 +22,7 @@ export class QueueService {
   async indexAccount(account: QueueTypes.Account) {
     this.accountsQueue.clean(this.gracePeriod, "completed");
 
-    const timestamp = new Date().toISOString().substring(0, 16);
+    const timestamp = new Date().toISOString().substring(0, 13);
 
     const jobId = `${account.address}-${timestamp}`;
 
@@ -38,19 +38,13 @@ export class QueueService {
     this.blocksQueue.add(block);
   }
 
-  async readyForBatch(batchSize: number) {
+  async readyForNextBatch(batchSize: number) {
     const [accountJobCounts, blockJobCounts] = await Promise.all([
       this.accountsQueue.getJobCounts(),
       this.blocksQueue.getJobCounts(),
     ]);
 
-    return (
-      accountJobCounts.waiting +
-        accountJobCounts.active +
-        blockJobCounts.waiting +
-        blockJobCounts.active <
-      batchSize / 10
-    );
+    return accountJobCounts.waiting + blockJobCounts.waiting < batchSize / 10;
   }
 
   async processAccounts(callback: QueueTypes.AccountCallback) {

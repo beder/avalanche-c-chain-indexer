@@ -12,7 +12,8 @@ export class IndexerService {
   private transactionRepository: TransactionRepository;
   private queue: QueueService;
 
-  private batchSize = 500;
+  private batchSize = Number(process.env.INDEXER_BATCH_SIZE || 1000);
+  private interval = Number(process.env.INDEXER_INTERVAL || 1000);
 
   constructor(
     avalanche: AvalancheService,
@@ -30,7 +31,7 @@ export class IndexerService {
     try {
       setInterval(async () => {
         await this.indexAvalanche();
-      }, Number(process.env.INDEXER_INTERVAL || 1000));
+      }, this.interval);
     } catch (err) {
       console.error("Error indexing Avalanche", err);
     }
@@ -41,7 +42,7 @@ export class IndexerService {
       console.log("Transactions:", await this.transactionRepository.getCount());
       console.log("Accounts:", await this.accountRepository.getCount());
 
-      if (!(await this.queue.readyForBatch(this.batchSize))) {
+      if (!(await this.queue.readyForNextBatch(this.batchSize))) {
         return;
       }
 
@@ -54,26 +55,13 @@ export class IndexerService {
   }
 
   async indexBlocks(blockNumber: bigint) {
-    const blockCount = await this.transactionRepository.getCountByBlockNumber(
-      blockNumber
+    const newBlockNumbers = await this.getNewBlockNumbers(blockNumber);
+
+    const missingBlockNumbers = await this.getMissingBlockNumbers(
+      this.batchSize - newBlockNumbers.length
     );
 
-    if (blockCount) {
-      return;
-    }
-
-    const maxIndexedBlockNumber =
-      (await this.transactionRepository.getHighestBlockNumber()) || BigInt(0);
-
-    const blockNumbers = Array.from(
-      {
-        length: Math.min(
-          this.batchSize,
-          Number(blockNumber - maxIndexedBlockNumber)
-        ),
-      },
-      (_, i) => blockNumber - BigInt(i)
-    );
+    const blockNumbers = newBlockNumbers.concat(missingBlockNumbers);
 
     await Promise.all(
       blockNumbers.map(async (blockNumber) => {
@@ -100,6 +88,41 @@ export class IndexerService {
     } catch (err) {
       console.error("Error indexing block", err);
     }
+  }
+
+  async getNewBlockNumbers(blockNumber: bigint) {
+    if (await this.transactionRepository.getCountByBlockNumber(blockNumber)) {
+      return [];
+    }
+
+    const maxIndexedBlockNumber =
+      await this.transactionRepository.getHighestBlockNumber();
+
+    return Array.from(
+      {
+        length: Math.min(
+          this.batchSize,
+          Number(blockNumber - maxIndexedBlockNumber)
+        ),
+      },
+      (_, i) => blockNumber - BigInt(i)
+    );
+  }
+
+  async getMissingBlockNumbers(limit: number) {
+    if (limit <= 0) {
+      return [];
+    }
+
+    const minIndexedBlockNumber =
+      await this.transactionRepository.getLowestBlockNumber();
+
+    return Array.from(
+      {
+        length: Math.min(limit, Number(minIndexedBlockNumber - BigInt(1))),
+      },
+      (_, i) => minIndexedBlockNumber - BigInt(i) - BigInt(1)
+    );
   }
 
   async indexBlock(blockNumber: number) {

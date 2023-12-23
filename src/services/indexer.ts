@@ -100,16 +100,14 @@ export class IndexerService {
 
   private async indexAvalanche() {
     try {
-      const [transactions, accounts] = await Promise.all([
-        this.transactionRepository.getCount(),
-        this.accountRepository.getCount(),
-      ]);
+      const [transactions, accounts] = (
+        await Promise.all([
+          this.transactionRepository.getCount(),
+          this.accountRepository.getCount(),
+        ])
+      ).map((count: number) => count.toString().padStart(12, " "));
 
-      const pad = (i: number) => i.toString().padStart(12, " ");
-
-      console.log(
-        `Transactions: ${pad(transactions)} | Accounts: ${pad(accounts)}`
-      );
+      console.log(`Transactions: ${transactions} | Accounts: ${accounts}`);
 
       if (!(await this.queue.readyForNextBatch(this.batchSize))) {
         return;

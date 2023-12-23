@@ -38,6 +38,14 @@ export class QueueService {
     this.blocksQueue.add(block);
   }
 
+  async processAccounts(callback: QueueTypes.AccountCallback) {
+    this.accountsQueue.process(callback);
+  }
+
+  async processBlocks(callback: QueueTypes.BlockCallback) {
+    this.blocksQueue.process(callback);
+  }
+
   async readyForNextBatch(batchSize: number) {
     const [accountJobCounts, blockJobCounts] = await Promise.all([
       this.accountsQueue.getJobCounts(),
@@ -45,13 +53,5 @@ export class QueueService {
     ]);
 
     return accountJobCounts.waiting + blockJobCounts.waiting < batchSize / 10;
-  }
-
-  async processAccounts(callback: QueueTypes.AccountCallback) {
-    this.accountsQueue.process(callback);
-  }
-
-  async processBlocks(callback: QueueTypes.BlockCallback) {
-    this.blocksQueue.process(callback);
   }
 }

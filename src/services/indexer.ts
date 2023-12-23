@@ -27,49 +27,6 @@ export class IndexerService {
     this.queue = queue;
   }
 
-  async startIndexing() {
-    try {
-      setInterval(async () => {
-        await this.indexAvalanche();
-      }, this.interval);
-    } catch (err) {
-      console.error("Error indexing Avalanche", err);
-    }
-  }
-
-  async indexAvalanche() {
-    try {
-      console.log("Transactions:", await this.transactionRepository.getCount());
-      console.log("Accounts:", await this.accountRepository.getCount());
-
-      if (!(await this.queue.readyForNextBatch(this.batchSize))) {
-        return;
-      }
-
-      const latestBlockNumber = await this.avalanche.getLatestBlockNumber();
-
-      await this.indexBlocks(BigInt(latestBlockNumber));
-    } catch (err) {
-      console.error("Error indexing transaction", err);
-    }
-  }
-
-  async indexBlocks(blockNumber: bigint) {
-    const newBlockNumbers = await this.getNewBlockNumbers(blockNumber);
-
-    const missingBlockNumbers = await this.getMissingBlockNumbers(
-      this.batchSize - newBlockNumbers.length
-    );
-
-    const blockNumbers = newBlockNumbers.concat(missingBlockNumbers);
-
-    await Promise.all(
-      blockNumbers.map(async (blockNumber) => {
-        await this.queue.indexBlock({ blockNumber: Number(blockNumber) });
-      })
-    );
-  }
-
   async processAccount(job: QueueTypes.AccountJob) {
     const { address } = job.data;
 
@@ -90,7 +47,33 @@ export class IndexerService {
     }
   }
 
-  async getNewBlockNumbers(blockNumber: bigint) {
+  async startIndexing() {
+    try {
+      setInterval(async () => {
+        await this.indexAvalanche();
+      }, this.interval);
+    } catch (err) {
+      console.error("Error indexing Avalanche", err);
+    }
+  }
+
+  private async getMissingBlockNumbers(limit: number) {
+    if (limit <= 0) {
+      return [];
+    }
+
+    const minIndexedBlockNumber =
+      await this.transactionRepository.getLowestBlockNumber();
+
+    return Array.from(
+      {
+        length: Math.min(limit, Number(minIndexedBlockNumber - BigInt(1))),
+      },
+      (_, i) => minIndexedBlockNumber - BigInt(i) - BigInt(1)
+    );
+  }
+
+  private async getNewBlockNumbers(blockNumber: bigint) {
     if (await this.transactionRepository.getCountByBlockNumber(blockNumber)) {
       return [];
     }
@@ -109,23 +92,36 @@ export class IndexerService {
     );
   }
 
-  async getMissingBlockNumbers(limit: number) {
-    if (limit <= 0) {
-      return [];
-    }
+  private async indexAccount(address: string) {
+    const balance = await this.avalanche.getBalance(address);
 
-    const minIndexedBlockNumber =
-      await this.transactionRepository.getLowestBlockNumber();
-
-    return Array.from(
-      {
-        length: Math.min(limit, Number(minIndexedBlockNumber - BigInt(1))),
-      },
-      (_, i) => minIndexedBlockNumber - BigInt(i) - BigInt(1)
-    );
+    await this.accountRepository.createOrUpdate({ address, balance });
   }
 
-  async indexBlock(blockNumber: number) {
+  private async indexAvalanche() {
+    try {
+      const [transactions, accounts] = await Promise.all([
+        this.transactionRepository.getCount(),
+        this.accountRepository.getCount(),
+      ]);
+
+      const pad = (i: number) => i.toString().padStart(12, " ");
+
+      console.log(
+        `Transactions: ${pad(transactions)} | Accounts: ${pad(accounts)}`
+      );
+
+      if (!(await this.queue.readyForNextBatch(this.batchSize))) {
+        return;
+      }
+
+      await this.indexBlocks();
+    } catch (err) {
+      console.error("Error indexing transaction", err);
+    }
+  }
+
+  private async indexBlock(blockNumber: number) {
     const block = await this.avalanche.getBlockByNumber(
       numberToHex(blockNumber)
     );
@@ -146,7 +142,25 @@ export class IndexerService {
     );
   }
 
-  async indexTransactions(transactions: AvalancheTypes.Transaction[]) {
+  private async indexBlocks() {
+    const blockNumber = BigInt(await this.avalanche.getLatestBlockNumber());
+
+    const newBlockNumbers = await this.getNewBlockNumbers(blockNumber);
+
+    const missingBlockNumbers = await this.getMissingBlockNumbers(
+      this.batchSize - newBlockNumbers.length
+    );
+
+    const blockNumbers = [...newBlockNumbers, ...missingBlockNumbers];
+
+    await Promise.all(
+      blockNumbers.map(async (blockNumber) => {
+        await this.queue.indexBlock({ blockNumber: Number(blockNumber) });
+      })
+    );
+  }
+
+  private async indexTransactions(transactions: AvalancheTypes.Transaction[]) {
     await Promise.all(
       transactions.map(async (tx) => {
         try {
@@ -160,11 +174,5 @@ export class IndexerService {
         }
       })
     );
-  }
-
-  async indexAccount(address: string) {
-    const balance = await this.avalanche.getBalance(address);
-
-    await this.accountRepository.createOrUpdate({ address, balance });
   }
 }

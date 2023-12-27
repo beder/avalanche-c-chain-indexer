@@ -48,11 +48,11 @@ export class QueueService {
   }
 
   async readyForNextBatch(batchSize: number) {
-    const [accountJobCounts, blockJobCounts] = await Promise.all([
-      this.accountsQueue.getJobCounts(),
-      this.blocksQueue.getJobCounts(),
+    const [accountWaitingCount, blockWaitingCount] = await Promise.all([
+      this.accountsQueue.getWaitingCount(),
+      this.blocksQueue.getWaitingCount(),
     ]);
 
-    return accountJobCounts.waiting + blockJobCounts.waiting < batchSize / 10;
+    return (accountWaitingCount + blockWaitingCount) < (batchSize / 10);
   }
 }

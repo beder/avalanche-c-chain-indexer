@@ -109,7 +109,11 @@ export class IndexerService {
 
       console.log(`Transactions: ${transactions} | Accounts: ${accounts}`);
 
-      if (!(await this.queue.readyForNextBatch(this.batchSize))) {
+      const readyForNextBatch = await this.queue.readyForNextBatch(
+        this.batchSize
+      );
+
+      if (!readyForNextBatch) {
         return;
       }
 

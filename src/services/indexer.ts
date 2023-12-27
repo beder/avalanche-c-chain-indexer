@@ -12,7 +12,7 @@ export class IndexerService {
   private transactionRepository: TransactionRepository;
   private queue: QueueService;
 
-  private batchSize = Number(process.env.INDEXER_BATCH_SIZE || 1000);
+  private batchSize = Number(process.env.INDEXER_BATCH_SIZE || 100);
   private interval = Number(process.env.INDEXER_INTERVAL || 1000);
 
   constructor(

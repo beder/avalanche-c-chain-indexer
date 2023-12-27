@@ -36,6 +36,7 @@ export class QueueService {
 
   async indexBlock(block: QueueTypes.Block) {
     this.blocksQueue.clean(this.gracePeriod, "completed");
+
     this.blocksQueue.add(block);
   }
 

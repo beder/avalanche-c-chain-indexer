@@ -6,6 +6,7 @@ export class QueueService {
   private blocksQueue: Bull.Queue;
 
   private gracePeriod = Number(process.env.QUEUE_CLEAN_GRACE_PERIOD || 3600000);
+  private concurrency = Number(process.env.QUEUE_CONCURRENCY || 10);
 
   private options = {
     redis: {
@@ -39,11 +40,11 @@ export class QueueService {
   }
 
   async processAccounts(callback: QueueTypes.AccountCallback) {
-    this.accountsQueue.process(callback);
+    this.accountsQueue.process(this.concurrency / 10, callback);
   }
 
   async processBlocks(callback: QueueTypes.BlockCallback) {
-    this.blocksQueue.process(callback);
+    this.blocksQueue.process(this.concurrency, callback);
   }
 
   async readyForNextBatch(batchSize: number) {

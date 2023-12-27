@@ -26,7 +26,7 @@ export class AccountRepository {
     });
   }
 
-  async getCount() {
+  getCount() {
     return this.prisma.account.count();
   }
 

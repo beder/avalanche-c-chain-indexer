@@ -6,6 +6,8 @@ import { RepositoryTypes } from "../types/repository";
 export class TransactionRepository {
   private prisma: PrismaClient;
 
+  private maximumPageSize = Number(process.env.MAXIMUM_PAGE_SIZE || 1000);
+
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
   }
@@ -30,7 +32,7 @@ export class TransactionRepository {
     });
   }
 
-  async getCount() {
+  getCount() {
     return this.prisma.transaction.count();
   }
 
@@ -220,7 +222,9 @@ export class TransactionRepository {
   }
 
   private getPageSize(pageSize?: number) {
-    return pageSize && pageSize <= 1000 ? pageSize : 1000;
+    return pageSize && pageSize < this.maximumPageSize
+      ? pageSize
+      : this.maximumPageSize;
   }
 
   private async getTransactions(

@@ -13,7 +13,7 @@ export class IndexerService {
   private queue: QueueService;
 
   private batchSize = Number(process.env.INDEXER_BATCH_SIZE || 100);
-  private interval = Number(process.env.INDEXER_INTERVAL || 1000);
+  private interval = Number(process.env.INDEXER_INTERVAL || 30000);
 
   constructor(
     avalanche: AvalancheService,
@@ -52,6 +52,8 @@ export class IndexerService {
       setInterval(async () => {
         await this.indexAvalanche();
       }, this.interval);
+
+      console.log(`Indexer is running and listening for new blocks every ${this.interval}ms`);
     } catch (err) {
       console.error("Error indexing Avalanche", err);
     }

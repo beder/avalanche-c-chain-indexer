@@ -41,7 +41,7 @@ export class QueueService {
   }
 
   async processAccounts(callback: QueueTypes.AccountCallback) {
-    this.accountsQueue.process(this.concurrency / 10, callback);
+    this.accountsQueue.process(this.concurrency, callback);
   }
 
   async processBlocks(callback: QueueTypes.BlockCallback) {

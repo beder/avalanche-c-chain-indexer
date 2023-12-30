@@ -1,10 +1,10 @@
+import compression from "compression";
 import express from "express";
 import { ApiService } from "./services/api";
 import { PrismaClient } from "@prisma/client";
 import { AccountRepository } from "./repositories/account";
 import { TransactionRepository } from "./repositories/transaction";
 
-const app = express();
 const port = 3000;
 
 const prisma = new PrismaClient();
@@ -12,6 +12,9 @@ const accountRepository = new AccountRepository(prisma);
 const transactionRepository = new TransactionRepository(prisma);
 
 const transactions = new ApiService(accountRepository, transactionRepository);
+
+const app = express();
+app.use(compression());
 
 app.get(
   "/addresses/top-by-balance",

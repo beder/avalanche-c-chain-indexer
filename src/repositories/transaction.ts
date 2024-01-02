@@ -13,19 +13,45 @@ export class TransactionRepository {
   }
 
   async createOrUpdate(transaction: AvalancheTypes.Transaction) {
-    const { hash, blockNumber, from, to, transactionIndex, value } =
-      transaction;
+    const {
+      blockHash,
+      blockNumber,
+      chainId,
+      from,
+      gas,
+      gasPrice,
+      hash,
+      input,
+      nonce,
+      r,
+      s,
+      to,
+      transactionIndex,
+      type,
+      v,
+      value,
+    } = transaction;
 
     return this.prisma.transaction.upsert({
       where: {
         hash,
       },
       create: {
+        blockHash,
         blockNumber: BigInt(blockNumber),
-        hash,
+        chainId,
         from,
+        gas: new Decimal(gas),
+        gasPrice: new Decimal(gasPrice),
+        hash,
+        input,
+        nonce,
+        r,
+        s,
         to,
         transactionIndex: Number(transactionIndex),
+        type,
+        v,
         value: new Decimal(value),
       },
       update: {},
@@ -40,34 +66,6 @@ export class TransactionRepository {
     const where = this.getAddressFilter(address);
 
     return this.prisma.transaction.count({ where });
-  }
-
-  async getCountByBlockNumber(blockNumber: bigint) {
-    return this.prisma.transaction.count({
-      where: {
-        blockNumber,
-      },
-    });
-  }
-
-  async getHighestBlockNumber() {
-    const transaction = await this.prisma.transaction.findFirst({
-      orderBy: {
-        blockNumber: "desc",
-      },
-    });
-
-    return transaction?.blockNumber || BigInt(0);
-  }
-
-  async getLowestBlockNumber() {
-    const transaction = await this.prisma.transaction.findFirst({
-      orderBy: {
-        blockNumber: "asc",
-      },
-    });
-
-    return transaction?.blockNumber || BigInt(0);
   }
 
   async listByAddress(

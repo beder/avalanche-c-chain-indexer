@@ -1,4 +1,3 @@
-// src/services/transactions.ts
 import { Request, Response } from "express";
 import { Account, Transaction } from "@prisma/client";
 import { numberToHex } from "web3-utils";
@@ -64,14 +63,19 @@ export class ApiService {
     };
   }
 
-  private formatTransaction(tx: Transaction) {
-    const { id, ...rest } = tx;
+  private formatTransaction(transaction: Transaction) {
+    const { id, ...rest } = transaction;
 
     return {
       ...rest,
-      blockNumber: numberToHex(tx.blockNumber),
-      transactionIndex: numberToHex(tx.transactionIndex),
-      value: numberToHex(tx.value.toFixed(0)),
+      blockNumber:
+        transaction.blockNumber && numberToHex(transaction.blockNumber),
+      gas: numberToHex(transaction.gas.toFixed(0)),
+      gasPrice: numberToHex(transaction.gasPrice.toFixed(0)),
+      transactionIndex:
+        transaction.transactionIndex &&
+        numberToHex(transaction.transactionIndex),
+      value: numberToHex(transaction.value.toFixed(0)),
     };
   }
 

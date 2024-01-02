@@ -4,11 +4,13 @@ import { AvalancheTypes } from "../types/avalanche";
 import { QueueService } from "./queue";
 import { QueueTypes } from "../types/queue";
 import { AccountRepository } from "../repositories/account";
+import { BlockRepository } from "../repositories/block";
 import { TransactionRepository } from "../repositories/transaction";
 
 export class IndexerService {
   private avalanche: AvalancheService;
   private accountRepository: AccountRepository;
+  private blockRepository: BlockRepository;
   private transactionRepository: TransactionRepository;
   private queue: QueueService;
 
@@ -18,11 +20,13 @@ export class IndexerService {
   constructor(
     avalanche: AvalancheService,
     accountRepository: AccountRepository,
+    blockRepository: BlockRepository,
     transactionRepository: TransactionRepository,
     queue: QueueService
   ) {
     this.avalanche = avalanche;
     this.accountRepository = accountRepository;
+    this.blockRepository = blockRepository;
     this.transactionRepository = transactionRepository;
     this.queue = queue;
   }
@@ -53,7 +57,9 @@ export class IndexerService {
         await this.indexAvalanche();
       }, this.interval);
 
-      console.log(`Indexer is running and listening for new blocks every ${this.interval}ms`);
+      console.log(
+        `Indexer is running and listening for new blocks every ${this.interval}ms`
+      );
     } catch (err) {
       console.error("Error indexing Avalanche", err);
     }
@@ -65,7 +71,7 @@ export class IndexerService {
     }
 
     const minIndexedBlockNumber =
-      await this.transactionRepository.getLowestBlockNumber();
+      await this.blockRepository.getLowestBlockNumber();
 
     return Array.from(
       {
@@ -76,12 +82,12 @@ export class IndexerService {
   }
 
   private async getNewBlockNumbers(blockNumber: bigint) {
-    if (await this.transactionRepository.getCountByBlockNumber(blockNumber)) {
+    if (await this.blockRepository.exists(blockNumber)) {
       return [];
     }
 
     const maxIndexedBlockNumber =
-      await this.transactionRepository.getHighestBlockNumber();
+      await this.blockRepository.getHighestBlockNumber();
 
     return Array.from(
       {
@@ -102,14 +108,17 @@ export class IndexerService {
 
   private async indexAvalanche() {
     try {
-      const [transactions, accounts] = (
+      const [accounts, blocks, transactions] = (
         await Promise.all([
-          this.transactionRepository.getCount(),
           this.accountRepository.getCount(),
+          this.blockRepository.getCount(),
+          this.transactionRepository.getCount(),
         ])
       ).map((count: number) => count.toString().padStart(12, " "));
 
-      console.log(`Transactions: ${transactions} | Accounts: ${accounts}`);
+      console.log(
+        `Accounts: ${accounts} | Blocks: ${blocks} | Transactions: ${transactions}`
+      );
 
       const readyForNextBatch = await this.queue.readyForNextBatch(
         this.batchSize
@@ -130,7 +139,13 @@ export class IndexerService {
       numberToHex(blockNumber)
     );
 
-    await this.indexTransactions(block.transactions);
+    await this.blockRepository.createOrUpdate(block);
+
+    await Promise.all(
+      block.transactions.map((transaction) =>
+        this.transactionRepository.createOrUpdate(transaction)
+      )
+    );
 
     const addresses = new Set<string>();
 
@@ -160,22 +175,6 @@ export class IndexerService {
     await Promise.all(
       blockNumbers.map(async (blockNumber) => {
         await this.queue.indexBlock({ blockNumber: Number(blockNumber) });
-      })
-    );
-  }
-
-  private async indexTransactions(transactions: AvalancheTypes.Transaction[]) {
-    await Promise.all(
-      transactions.map(async (tx) => {
-        try {
-          await this.transactionRepository.createOrUpdate(tx);
-        } catch (err) {
-          console.error("Error indexing transaction", err);
-
-          console.dir({ tx }, { depth: null, colors: true });
-
-          throw err;
-        }
       })
     );
   }

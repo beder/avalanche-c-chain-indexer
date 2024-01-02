@@ -10,14 +10,66 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Account {
+  id      String  @id @default(cuid())
+  address String  @unique
+  balance Decimal @db.Decimal(30, 0)
+
+  @@index([address], name: "index_accounts_on_address")
+  @@index([balance], name: "index_accounts_on_balance")
+}
+
+model Block {
+  id               String   @id @default(cuid())
+  baseFeePerGas    Decimal  @db.Decimal(30, 0)
+  blockExtraData   String
+  blockGasCost     Decimal  @db.Decimal(30, 0)
+  difficulty       Decimal  @db.Decimal(30, 0)
+  extDataGasUsed   Decimal  @db.Decimal(30, 0)
+  extDataHash      String
+  extraData        String
+  gasLimit         Decimal  @db.Decimal(30, 0)
+  gasUsed          Decimal  @db.Decimal(30, 0)
+  hash             String   @unique
+  logsBloom        String
+  miner            String
+  mixHash          String
+  nonce            String
+  number           BigInt   @unique
+  parentHash       String
+  receiptsRoot     String
+  sha3Uncles       String
+  size             BigInt
+  stateRoot        String
+  timestamp        DateTime
+  totalDifficulty  Decimal  @db.Decimal(30, 0)
+  transactionsRoot String
+
+  transactions Transaction[]
+
+  @@index([number], name: "index_blocks_on_number")
+}
+
 model Transaction {
   id               String  @id @default(cuid())
+  blockHash        String?
+  blockNumber      BigInt?
+  from             String
+  gas              Decimal @db.Decimal(30, 0)
+  gasPrice         Decimal @db.Decimal(30, 0)
   hash             String  @unique
+  input            String
+  nonce            String
   to               String?
-  from             String?
-  blockNumber      BigInt
-  transactionIndex Int
+  transactionIndex Int?
   value            Decimal @db.Decimal(30, 0)
+  type             String
+  chainId          String
+  v                String
+  r                String
+  s                String
+
+  block Block? @relation(fields: [blockNumber], references: [number])
 
   @@index([blockNumber], name: "index_transactions_on_block_number")
   @@index([blockNumber, transactionIndex], name: "index_transactions_on_block")
@@ -29,13 +81,4 @@ model Transaction {
   @@index([value], name: "index_transactions_on_value")
   @@index([value, blockNumber], name: "index_transactions_on_value_and_block")
   @@index([value, blockNumber, transactionIndex], name: "index_transactions_on_value_and_block_and_index")
-}
-
-model Account {
-  id      String  @id @default(cuid())
-  address String  @unique
-  balance Decimal @db.Decimal(30, 0)
-
-  @@index([address], name: "index_accounts_on_address")
-  @@index([balance], name: "index_accounts_on_balance")
 }

@@ -1,6 +1,5 @@
 import { AvalancheService } from "./avalanche";
 import { numberToHex } from "web3-utils";
-import { AvalancheTypes } from "../types/avalanche";
 import { QueueService } from "./queue";
 import { QueueTypes } from "../types/queue";
 import { AccountRepository } from "../repositories/account";
@@ -53,9 +52,7 @@ export class IndexerService {
 
   async startIndexing() {
     try {
-      setInterval(async () => {
-        await this.indexAvalanche();
-      }, this.interval);
+      setInterval(() => this.indexAvalanche(), this.interval);
 
       console.log(
         `Indexer is running and listening for new blocks every ${this.interval}ms`

@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { AvalancheTypes } from "../types/avalanche";
 import { Decimal } from "@prisma/client/runtime/library";
+import { RepositoryTypes } from "../types/repository";
+import { getPageSize } from "../lib/repositories";
 
 export class BlockRepository {
   private prisma: PrismaClient;
@@ -101,5 +103,48 @@ export class BlockRepository {
     });
 
     return block?.number || BigInt(0);
+  }
+
+  list(pagination: RepositoryTypes.Pagination) {
+    const where = this.getListByNumberFilter(pagination);
+    const orderBy = this.getOrderByNumber(pagination.direction);
+
+    return this.getBlocks(where, orderBy, pagination);
+  }
+
+  private async getBlocks(
+    where: any,
+    orderBy: any,
+    pagination: RepositoryTypes.Pagination
+  ) {
+    const take = getPageSize(pagination.pageSize);
+
+    const blocks = await this.prisma.block.findMany({
+      orderBy,
+      take,
+      where,
+    });
+
+    return pagination.direction === "backward" ? blocks.reverse() : blocks;
+  }
+
+  private getListByNumberFilter(pagination: RepositoryTypes.Pagination) {
+    const { cursor, direction } = pagination;
+
+    if (!cursor) {
+      return {};
+    }
+
+    const cursorOperator = direction === "backward" ? "gt" : "lt";
+
+    return { number: { [cursorOperator]: BigInt(cursor) } };
+  }
+
+  private getOrderByNumber(direction?: RepositoryTypes.Direction) {
+    const sortOrder: "asc" | "desc" = direction === "backward" ? "asc" : "desc";
+
+    return {
+      number: sortOrder,
+    };
   }
 }

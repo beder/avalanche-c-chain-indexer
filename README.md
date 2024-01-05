@@ -94,6 +94,35 @@ GET http://localhost:3000/addresses/0x123abc/transaction-count
 }
 ```
 
+### List Blocks Sorted by Number
+
+#### Endpoint:
+
+```http
+GET /blocks
+```
+
+#### Example Request:
+
+```http
+GET http://localhost:3000/blocks
+```
+
+#### Example Response:
+
+```json
+[
+    {
+        "hash": "0x85230025f1b0ffc35b0289d15b58d957772a89e04e1d9de57393822eb48fcbb7",
+        "miner": "0x0100000000000000000000000000000000000000",
+        "number": "0x261aae0",
+        "size": "0x8fc",
+        "timestamp": "0x65979a13"
+    },
+    // ... additional blocks sorted by number
+]
+```
+
 ### List Transactions Sorted by Value
 
 #### Endpoint:

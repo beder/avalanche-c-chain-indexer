@@ -1,19 +1,23 @@
 import { Request, Response } from "express";
-import { Account, Transaction } from "@prisma/client";
+import { Account, Block, Transaction } from "@prisma/client";
 import { numberToHex } from "web3-utils";
 import { AccountRepository } from "../repositories/account";
+import { BlockRepository } from "../repositories/block";
 import { TransactionRepository } from "../repositories/transaction";
 import { RepositoryTypes } from "../types/repository";
 
 export class ApiService {
   private accountRepository: AccountRepository;
+  private blockRepository: BlockRepository;
   private transactionRepository: TransactionRepository;
 
   constructor(
     accountRepository: AccountRepository,
+    blockRepository: BlockRepository,
     transactionRepository: TransactionRepository
   ) {
     this.accountRepository = accountRepository;
+    this.blockRepository = blockRepository;
     this.transactionRepository = transactionRepository;
   }
 
@@ -38,6 +42,14 @@ export class ApiService {
     res.json({ count });
   }
 
+  async listBlocks(req: Request, res: Response) {
+    const pagination = this.getPagination(req);
+
+    const blocks = await this.blockRepository.list(pagination);
+
+    res.json(blocks.map(this.formatBlock));
+  }
+
   async listTransactionsByValue(req: Request, res: Response) {
     const pagination = this.getPagination(req);
 
@@ -60,6 +72,24 @@ export class ApiService {
     return {
       ...rest,
       balance: numberToHex(address.balance.toFixed(0)),
+    };
+  }
+
+  private formatBlock(block: Block) {
+    const { id, ...rest } = block;
+
+    return {
+      ...rest,
+      baseFeePerGas: numberToHex(block.baseFeePerGas.toFixed(0)),
+      blockGasCost: numberToHex(block.blockGasCost.toFixed(0)),
+      difficulty: numberToHex(block.difficulty.toFixed(0)),
+      extDataGasUsed: numberToHex(block.extDataGasUsed.toFixed(0)),
+      gasLimit: numberToHex(block.gasLimit.toFixed(0)),
+      gasUsed: numberToHex(block.gasUsed.toFixed(0)),
+      number: numberToHex(block.number),
+      size: numberToHex(block.size),
+      timestamp: numberToHex(Math.floor(block.timestamp.getTime() / 1000)),
+      totalDifficulty: numberToHex(block.totalDifficulty.toFixed(0)),
     };
   }
 

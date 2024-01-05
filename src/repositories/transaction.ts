@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { AvalancheTypes } from "../types/avalanche";
 import { RepositoryTypes } from "../types/repository";
+import { getPageSize } from "../lib/repositories";
 
 export class TransactionRepository {
   private prisma: PrismaClient;
@@ -219,18 +220,12 @@ export class TransactionRepository {
     ];
   }
 
-  private getPageSize(pageSize?: number) {
-    return pageSize && pageSize < this.maximumPageSize
-      ? pageSize
-      : this.maximumPageSize;
-  }
-
   private async getTransactions(
     where: any,
     orderBy: any,
     pagination: RepositoryTypes.Pagination
   ) {
-    const take = this.getPageSize(pagination.pageSize);
+    const take = getPageSize(pagination.pageSize);
 
     const transactions = await this.prisma.transaction.findMany({
       where,

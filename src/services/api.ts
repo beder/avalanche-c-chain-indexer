@@ -5,7 +5,9 @@ import { AccountRepository } from "../repositories/account";
 import { BlockRepository } from "../repositories/block";
 import { TransactionRepository } from "../repositories/transaction";
 import { RepositoryTypes } from "../types/repository";
+import { injectable } from "inversify";
 
+@injectable()
 export class ApiService {
   private accountRepository: AccountRepository;
   private blockRepository: BlockRepository;

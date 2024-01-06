@@ -1,13 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
+import { injectable } from "inversify";
 import { AvalancheTypes } from "../types/avalanche";
 import { RepositoryTypes } from "../types/repository";
 import { getPageSize } from "../lib/repositories";
 
+@injectable()
 export class TransactionRepository {
   private prisma: PrismaClient;
-
-  private maximumPageSize = Number(process.env.MAXIMUM_PAGE_SIZE || 1000);
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;

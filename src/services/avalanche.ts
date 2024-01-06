@@ -1,6 +1,8 @@
 import { cchain } from "../lib/avalanche";
+import { injectable } from "inversify";
 import { AvalancheTypes } from "../types/avalanche";
 
+@injectable()
 export class AvalancheService {
   async getBalance(address: string): Promise<string> {
     return this.callMethod("eth_getBalance", [address, "latest"]);

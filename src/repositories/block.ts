@@ -1,9 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { AvalancheTypes } from "../types/avalanche";
 import { Decimal } from "@prisma/client/runtime/library";
+import { injectable } from "inversify";
 import { RepositoryTypes } from "../types/repository";
 import { getPageSize } from "../lib/repositories";
 
+@injectable()
 export class BlockRepository {
   private prisma: PrismaClient;
 

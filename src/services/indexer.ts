@@ -1,4 +1,5 @@
 import { AvalancheService } from "./avalanche";
+import { injectable } from "inversify";
 import { numberToHex } from "web3-utils";
 import { QueueService } from "./queue";
 import { QueueTypes } from "../types/queue";
@@ -6,6 +7,7 @@ import { AccountRepository } from "../repositories/account";
 import { BlockRepository } from "../repositories/block";
 import { TransactionRepository } from "../repositories/transaction";
 
+@injectable()
 export class IndexerService {
   private avalanche: AvalancheService;
   private accountRepository: AccountRepository;
@@ -52,6 +54,9 @@ export class IndexerService {
 
   async startIndexing() {
     try {
+      this.queue.processAccounts(this.processAccount.bind(this));
+      this.queue.processBlocks(this.processBlock.bind(this));
+
       setInterval(() => this.indexAvalanche(), this.interval);
 
       console.log(

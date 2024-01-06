@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { AvalancheTypes } from "../types/avalanche";
 import { Decimal } from "@prisma/client/runtime/library";
+import { injectable } from "inversify";
 
+@injectable()
 export class AccountRepository {
   private prisma: PrismaClient;
 

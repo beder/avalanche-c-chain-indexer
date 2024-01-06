@@ -1,6 +1,8 @@
 import Bull from "bull";
+import { injectable } from "inversify";
 import { QueueTypes } from "../types/queue";
 
+@injectable()
 export class QueueService {
   private accountsQueue: Bull.Queue;
   private blocksQueue: Bull.Queue;
@@ -54,6 +56,6 @@ export class QueueService {
       this.blocksQueue.getWaitingCount(),
     ]);
 
-    return (accountWaitingCount + blockWaitingCount) < (batchSize / 10);
+    return accountWaitingCount + blockWaitingCount < batchSize / 10;
   }
 }

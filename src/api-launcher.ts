@@ -1,23 +1,12 @@
+import "@abraham/reflection";
 import compression from "compression";
+import { container } from "./inversify.config";
 import express from "express";
 import { ApiService } from "./services/api";
-import { PrismaClient } from "@prisma/client";
-import { AccountRepository } from "./repositories/account";
-import { BlockRepository } from "./repositories/block";
-import { TransactionRepository } from "./repositories/transaction";
 
 const port = 3000;
 
-const prisma = new PrismaClient();
-const accountRepository = new AccountRepository(prisma);
-const blockRepository = new BlockRepository(prisma);
-const transactionRepository = new TransactionRepository(prisma);
-
-const apiService = new ApiService(
-  accountRepository,
-  blockRepository,
-  transactionRepository
-);
+const apiService = container.get(ApiService);
 
 const app = express();
 app.use(compression());

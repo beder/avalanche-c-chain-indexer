@@ -7,7 +7,11 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
+    "lib": ["es6"],
+    "types": ["@abraham/reflection"],
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

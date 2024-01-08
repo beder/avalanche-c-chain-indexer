@@ -1,7 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 import { injectable } from "inversify";
-import { AvalancheTypes } from "../types/avalanche";
 import { RepositoryTypes } from "../types/repository";
 import { getPageSize } from "../lib/repositories";
 
@@ -11,52 +9,6 @@ export class TransactionRepository {
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
-  }
-
-  async createOrUpdate(transaction: AvalancheTypes.Transaction) {
-    const {
-      blockHash,
-      blockNumber,
-      chainId,
-      from,
-      gas,
-      gasPrice,
-      hash,
-      input,
-      nonce,
-      r,
-      s,
-      to,
-      transactionIndex,
-      type,
-      v,
-      value,
-    } = transaction;
-
-    return this.prisma.transaction.upsert({
-      where: {
-        hash,
-      },
-      create: {
-        blockHash,
-        blockNumber: BigInt(blockNumber),
-        chainId,
-        from,
-        gas: new Decimal(gas),
-        gasPrice: new Decimal(gasPrice),
-        hash,
-        input,
-        nonce,
-        r,
-        s,
-        to,
-        transactionIndex: Number(transactionIndex),
-        type,
-        v,
-        value: new Decimal(value),
-      },
-      update: {},
-    });
   }
 
   getCount() {

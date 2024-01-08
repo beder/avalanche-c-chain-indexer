@@ -1,6 +1,7 @@
+import { Block } from "../dtos/block";
 import { cchain } from "../lib/avalanche";
 import { injectable } from "inversify";
-import { AvalancheTypes } from "../types/avalanche";
+import { plainToInstance } from "class-transformer";
 
 @injectable()
 export class AvalancheService {
@@ -8,8 +9,15 @@ export class AvalancheService {
     return this.callMethod("eth_getBalance", [address, "latest"]);
   }
 
-  async getBlockByNumber(blockNumber: string): Promise<AvalancheTypes.Block> {
-    return this.callMethod("eth_getBlockByNumber", [blockNumber, true]);
+  async getBlockByNumber(blockNumber: string): Promise<Block> {
+    const block = await this.callMethod("eth_getBlockByNumber", [
+      blockNumber,
+      true,
+    ]);
+
+    return plainToInstance(Block, block, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async getLatestBlockNumber(): Promise<string> {

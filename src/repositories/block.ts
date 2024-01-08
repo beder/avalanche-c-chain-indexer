@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { AvalancheTypes } from "../types/avalanche";
-import { Decimal } from "@prisma/client/runtime/library";
+import { Block } from "../dtos/block";
 import { injectable } from "inversify";
 import { RepositoryTypes } from "../types/repository";
 import { getPageSize } from "../lib/repositories";
@@ -13,61 +12,22 @@ export class BlockRepository {
     this.prisma = prisma;
   }
 
-  async createOrUpdate(block: AvalancheTypes.Block) {
-    const {
-      baseFeePerGas,
-      blockExtraData,
-      blockGasCost,
-      difficulty,
-      extDataGasUsed,
-      extDataHash,
-      extraData,
-      gasLimit,
-      gasUsed,
-      hash,
-      logsBloom,
-      miner,
-      mixHash,
-      nonce,
-      number,
-      parentHash,
-      receiptsRoot,
-      sha3Uncles,
-      size,
-      stateRoot,
-      timestamp,
-      totalDifficulty,
-      transactionsRoot,
-    } = block;
+  async createOrUpdate(block: Block) {
+    const { number, transactions } = block;
 
     return this.prisma.block.upsert({
-      where: {
-        number: BigInt(number),
-      },
+      where: { number },
       create: {
-        baseFeePerGas: new Decimal(baseFeePerGas),
-        blockExtraData,
-        blockGasCost: new Decimal(blockGasCost),
-        difficulty: new Decimal(difficulty),
-        extDataGasUsed: new Decimal(extDataGasUsed),
-        extDataHash,
-        extraData,
-        gasLimit: new Decimal(gasLimit),
-        gasUsed: new Decimal(gasUsed),
-        hash,
-        logsBloom,
-        miner,
-        mixHash,
-        nonce,
-        number: BigInt(number),
-        parentHash,
-        receiptsRoot,
-        sha3Uncles,
-        size: BigInt(size),
-        stateRoot,
-        timestamp: new Date(Number(timestamp) * 1000),
-        totalDifficulty: new Decimal(totalDifficulty),
-        transactionsRoot,
+        ...block,
+        ...(transactions && {
+          transactions: {
+            createMany: {
+              data: block.transactions.map(
+                ({ blockNumber, ...transaction }) => ({ ...transaction })
+              ),
+            },
+          },
+        }),
       },
       update: {},
     });

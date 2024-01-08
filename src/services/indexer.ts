@@ -143,12 +143,6 @@ export class IndexerService {
 
     await this.blockRepository.createOrUpdate(block);
 
-    await Promise.all(
-      block.transactions.map((transaction) =>
-        this.transactionRepository.createOrUpdate(transaction)
-      )
-    );
-
     const addresses = new Set<string>();
 
     block.transactions.forEach((tx) => {

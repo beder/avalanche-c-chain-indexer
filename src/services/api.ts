@@ -69,19 +69,15 @@ export class ApiService {
   }
 
   private formatAddress(address: Account) {
-    const { id, ...rest } = address;
-
     return {
-      ...rest,
+      ...address,
       balance: numberToHex(address.balance.toFixed(0)),
     };
   }
 
   private formatBlock(block: Block) {
-    const { id, ...rest } = block;
-
     return {
-      ...rest,
+      ...block,
       baseFeePerGas: numberToHex(block.baseFeePerGas.toFixed(0)),
       blockGasCost: numberToHex(block.blockGasCost.toFixed(0)),
       difficulty: numberToHex(block.difficulty.toFixed(0)),
@@ -96,10 +92,8 @@ export class ApiService {
   }
 
   private formatTransaction(transaction: Transaction) {
-    const { id, ...rest } = transaction;
-
     return {
-      ...rest,
+      ...transaction,
       blockNumber:
         transaction.blockNumber && numberToHex(transaction.blockNumber),
       gas: numberToHex(transaction.gas.toFixed(0)),

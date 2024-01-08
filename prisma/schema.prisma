@@ -11,8 +11,7 @@ datasource db {
 }
 
 model Account {
-  id      String  @id @default(cuid())
-  address String  @unique
+  address String  @id
   balance Decimal @db.Decimal(30, 0)
 
   @@index([address], name: "index_accounts_on_address")
@@ -20,7 +19,7 @@ model Account {
 }
 
 model Block {
-  id               String   @id @default(cuid())
+  hash             String   @id
   baseFeePerGas    Decimal  @db.Decimal(30, 0)
   blockExtraData   String
   blockGasCost     Decimal  @db.Decimal(30, 0)
@@ -30,7 +29,6 @@ model Block {
   extraData        String
   gasLimit         Decimal  @db.Decimal(30, 0)
   gasUsed          Decimal  @db.Decimal(30, 0)
-  hash             String   @unique
   logsBloom        String
   miner            String
   mixHash          String
@@ -51,13 +49,12 @@ model Block {
 }
 
 model Transaction {
-  id               String  @id @default(cuid())
+  hash             String  @id
   blockHash        String?
   blockNumber      BigInt?
   from             String
   gas              Decimal @db.Decimal(30, 0)
   gasPrice         Decimal @db.Decimal(30, 0)
-  hash             String  @unique
   input            String
   nonce            String
   to               String?

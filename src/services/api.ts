@@ -1,8 +1,8 @@
+import { Account, Block, Transaction } from "../views";
 import { Request, Response } from "express";
-import { Account, Block, Transaction } from "@prisma/client";
-import { numberToHex } from "web3-utils";
 import { AccountRepository } from "../repositories/account";
 import { BlockRepository } from "../repositories/block";
+import { plainToInstance } from "class-transformer";
 import { TransactionRepository } from "../repositories/transaction";
 import { RepositoryTypes } from "../types/repository";
 import { injectable } from "inversify";
@@ -33,7 +33,7 @@ export class ApiService {
       pagination
     );
 
-    res.json(transactions.map(this.formatTransaction));
+    res.json(plainToInstance(Transaction, transactions));
   }
 
   async getTransactionCount(req: Request, res: Response) {
@@ -49,7 +49,7 @@ export class ApiService {
 
     const blocks = await this.blockRepository.list(pagination);
 
-    res.json(blocks.map(this.formatBlock));
+    res.json(plainToInstance(Block, blocks));
   }
 
   async listTransactionsByValue(req: Request, res: Response) {
@@ -59,50 +59,13 @@ export class ApiService {
       pagination
     );
 
-    res.json(transactions.map(this.formatTransaction));
+    res.json(plainToInstance(Transaction, transactions));
   }
 
-  async getTopAddresses(req: Request, res: Response) {
+  async getTopAddresses(_req: Request, res: Response) {
     const addresses = await this.accountRepository.listTop();
 
-    res.json(addresses.map(this.formatAddress));
-  }
-
-  private formatAddress(address: Account) {
-    return {
-      ...address,
-      balance: numberToHex(address.balance.toFixed(0)),
-    };
-  }
-
-  private formatBlock(block: Block) {
-    return {
-      ...block,
-      baseFeePerGas: numberToHex(block.baseFeePerGas.toFixed(0)),
-      blockGasCost: numberToHex(block.blockGasCost.toFixed(0)),
-      difficulty: numberToHex(block.difficulty.toFixed(0)),
-      extDataGasUsed: numberToHex(block.extDataGasUsed.toFixed(0)),
-      gasLimit: numberToHex(block.gasLimit.toFixed(0)),
-      gasUsed: numberToHex(block.gasUsed.toFixed(0)),
-      number: numberToHex(block.number),
-      size: numberToHex(block.size),
-      timestamp: numberToHex(Math.floor(block.timestamp.getTime() / 1000)),
-      totalDifficulty: numberToHex(block.totalDifficulty.toFixed(0)),
-    };
-  }
-
-  private formatTransaction(transaction: Transaction) {
-    return {
-      ...transaction,
-      blockNumber:
-        transaction.blockNumber && numberToHex(transaction.blockNumber),
-      gas: numberToHex(transaction.gas.toFixed(0)),
-      gasPrice: numberToHex(transaction.gasPrice.toFixed(0)),
-      transactionIndex:
-        transaction.transactionIndex &&
-        numberToHex(transaction.transactionIndex),
-      value: numberToHex(transaction.value.toFixed(0)),
-    };
+    res.json(plainToInstance(Account, addresses));
   }
 
   private getPagination(req: Request): RepositoryTypes.Pagination {

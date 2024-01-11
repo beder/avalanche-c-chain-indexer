@@ -12,7 +12,7 @@ export class BlockRepository {
     this.prisma = prisma;
   }
 
-  async createOrUpdate(block: Block) {
+  createOrUpdate(block: Block) {
     const { number, transactions } = block;
 
     return this.prisma.block.upsert({

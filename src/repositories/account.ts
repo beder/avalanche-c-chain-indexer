@@ -11,7 +11,7 @@ export class AccountRepository {
     this.prisma = prisma;
   }
 
-  async createOrUpdate(account: AvalancheTypes.Account) {
+  createOrUpdate(account: AvalancheTypes.Account) {
     const { address, balance } = account;
 
     return this.prisma.account.upsert({
@@ -32,7 +32,7 @@ export class AccountRepository {
     return this.prisma.account.count();
   }
 
-  async listTop() {
+  listTop() {
     return this.prisma.account.findMany({
       take: 100,
       orderBy: {

@@ -15,7 +15,7 @@ export class TransactionRepository {
     return this.prisma.transaction.count();
   }
 
-  async getCountByAddress(address: string) {
+  getCountByAddress(address: string) {
     const where = this.getAddressFilter(address);
 
     return this.prisma.transaction.count({ where });

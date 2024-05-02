@@ -7,18 +7,10 @@ This project indexes the C-Chain of Avalanche and provides endpoints for accessi
 1. Install dependencies
 
 ```bash
-docker compose run --rm api npm install
+docker compose build
 ```
 
-2. Initialize the database
-
-💡 Please note that this command will not exit automatically. You will need to end it manually. Use Ctrl+C in MacOS.
-
-```bash
-docker compose run -e POSTGRES_HOST_AUTH_METHOD=trust --rm postgres
-```
-
-3. Setup the database
+2. Setup the database
 
 ```bash
 docker compose run --rm indexer npx prisma db push

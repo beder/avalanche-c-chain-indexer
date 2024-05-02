@@ -30,9 +30,9 @@ services:
     image: postgres:16-alpine
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
-      PGUSER: "postgres"
-      POSTGRES_PASSWORD: "postgres"
-      POSTGRES_DB: "postgres"
+      PGUSER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     healthcheck:
       test: ["CMD", "pg_isready"]
       interval: 10s

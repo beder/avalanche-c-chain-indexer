@@ -1,10 +1,10 @@
-version: "3.8"
 services:
   api:
     build: .
     command: npm run api
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
     ports:
@@ -15,8 +15,10 @@ services:
     build: .
     command: npm run indexer
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
       # INDEXER_INTERVAL: 60000
@@ -28,10 +30,23 @@ services:
     image: postgres:16-alpine
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
+      PGUSER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "postgres"
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres:/var/lib/postgresql/data/pgdata
   redis:
     command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     image: redis:7-alpine
     volumes:
       - redis:/data
